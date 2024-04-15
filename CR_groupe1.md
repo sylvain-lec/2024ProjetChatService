@@ -81,3 +81,11 @@ Recherche dans les messages (choisir la bonne structure de données)
 
 
 ### Répartition des tâches  
+**Mardi** : groupe complet sur ??  
+**Jours suivants** : Binômes
+
+### Trello :  
+Les binômes se positionnent sur les cartes (add members)   
+Ils peuvent ajouter les autres si besoin (pour des tests ou debug par exemple)  
+**Les tâches circulent d'un état à un autre**: Backlog, To Do, In Progress, Testing, Review, Done  
+**Utilisation de labels pour un repère visuel des types d'éléments** : feature, enhancement, critical, bug
