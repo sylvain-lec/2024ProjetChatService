@@ -49,8 +49,9 @@ public class ServerMsg {
 		nextUserId = new AtomicInteger(1);
 		nextGroupId = new AtomicInteger(-1);
 		sp = new ServerPacketProcessor(this);
-		executor = Executors.newCachedThreadPool();	}
-	
+		executor = Executors.newCachedThreadPool();
+	}
+
 	public GroupMsg createGroup(int ownerId) {
 		UserMsg owner = users.get(ownerId);
 		if (owner==null) throw new ServerException("User with id="+ownerId+" unknown. Group creation failed.");
