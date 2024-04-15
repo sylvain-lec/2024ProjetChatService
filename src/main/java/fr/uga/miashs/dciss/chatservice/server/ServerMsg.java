@@ -49,8 +49,7 @@ public class ServerMsg {
 		nextUserId = new AtomicInteger(1);
 		nextGroupId = new AtomicInteger(-1);
 		sp = new ServerPacketProcessor(this);
-		executor = Executors.newWorkStealingPool();
-	}
+		executor = Executors.newCachedThreadPool();	}
 	
 	public GroupMsg createGroup(int ownerId) {
 		UserMsg owner = users.get(ownerId);
