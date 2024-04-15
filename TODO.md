@@ -1,5 +1,5 @@
 ## Point quotidien
-Réunion d'affectation des tâches / bugs à corriger / échanges
+Réunion d'affectation des tâches / bugs à corriger / échanges  
 Mise à jour Trello avec activités de chacun
 
 ## Protocoles du serveur (formats de messages définis pour implémenter les fonctionnalités)
