@@ -81,10 +81,10 @@ Recherche dans les messages (choisir la bonne structure de données)
 
 
 ### Répartition des tâches  
-**Mardi** : groupe complet sur ??  
+**Mardi après-midi** : groupe complet travaille sur Envoi d'images + suppression de groupes. Puis répartition par groupe.  
 **Jours suivants** : Binômes
 
-### Trello :  
+### Gestion de projet - Trello :  
 Les binômes se positionnent sur les cartes (add members)   
 Ils peuvent ajouter les autres si besoin (pour des tests ou debug par exemple)  
 **Les tâches circulent d'un état à un autre**: Backlog, To Do, In Progress, Testing, Review, Done  
