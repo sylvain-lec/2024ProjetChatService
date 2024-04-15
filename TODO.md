@@ -1,5 +1,5 @@
 ## Point quotidien
-Réunion d'affectation des tâches / bugs à corriger / échanges
+Réunion d'affectation des tâches / bugs à corriger / échanges  
 Mise à jour Trello avec activités de chacun
 
 ## Protocoles du serveur (formats de messages définis pour implémenter les fonctionnalités)
@@ -34,8 +34,8 @@ Reporter les bug dans un backlog
 Ecriture de la documentation du projet
 
 ## Extras
-Partage de médias (image, vidéo)
-Indicateur de réception des messages pour l'expéditeur
-Chiffrement des échanges
-Intégration de messages vocaux
+Partage de médias (image, vidéo)  
+Indicateur de réception des messages pour l'expéditeur  
+Chiffrement des échanges  
+Intégration de messages vocaux  
 Recherche dans les messages (choisir la bonne structure de données)
