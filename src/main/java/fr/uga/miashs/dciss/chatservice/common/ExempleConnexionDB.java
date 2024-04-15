@@ -20,7 +20,7 @@ public class ExempleConnexionDB {
 		
 		try {
 			Connection cnx = DriverManager.getConnection("jdbc:derby:target/sample;create=true");//"jdbc:sqlite:sample.db");//
-			
+			cnx.createStatement().executeUpdate("DROP TABLE MsgUser");
 			cnx.createStatement().executeUpdate("CREATE TABLE MsgUser (id INT PRIMARY KEY, nickname VARCHAR(20))");
 
 			PreparedStatement pstmt = cnx.prepareStatement("INSERT INTO MsgUser VALUES (?,?)");
