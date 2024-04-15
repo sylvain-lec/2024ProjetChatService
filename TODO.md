@@ -18,4 +18,4 @@ Swing: https://docs.oracle.com/javase/tutorial/uiswing/index.html
 FlatLaf: https://github.com/JFormDesigner/FlatLaf
 
 ## BDD
-Ajout des diverses fonctionnalités
+Ajout des diverses fonctionnalités dans la DB Derby : https://db.apache.org/derby/
