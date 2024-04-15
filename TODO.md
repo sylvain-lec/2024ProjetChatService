@@ -1,4 +1,7 @@
-## Protocoles du serveur
+## Point quotidien
+Réunion d'affectation des tâches / bugs à corriger
+
+## Protocoles du serveur (formats de messages définis pour implémenter les fonctionnalités)
 Gestion des différents contenus (images, ...)  
 Gestion des informations (maj nom de groupe, suppression utilisateur, modif message, ...)
 Gestion des groupes (création, modification, notifications)
@@ -19,3 +22,8 @@ FlatLaf: https://github.com/JFormDesigner/FlatLaf
 
 ## BDD
 Ajout des diverses fonctionnalités dans la DB Derby : https://db.apache.org/derby/
+
+## Tests fonctionnels
+Ecriture de scénario de tests
+Exécution (manuellement si plus simple)
+Reporter les bug dans un backlog
