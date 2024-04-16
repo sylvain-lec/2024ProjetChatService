@@ -11,6 +11,9 @@
 
 package fr.uga.miashs.dciss.chatservice.server;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.logging.Logger;
@@ -26,7 +29,7 @@ public class ServerPacketProcessor implements PacketProcessor {
 	}
 
 	@Override
-	public void process(Packet p) {
+	public void process(Packet p) throws IOException {
 		// ByteBufferVersion. On aurait pu utiliser un ByteArrayInputStream + DataInputStream à la place
 		ByteBuffer buf = ByteBuffer.wrap(p.data);
 		byte type = buf.get();
@@ -46,11 +49,24 @@ public class ServerPacketProcessor implements PacketProcessor {
 		}
 	}
 
-	public void createGroup(int ownerId, ByteBuffer data) {
+	public void createGroup(int ownerId, ByteBuffer data) throws IOException {
 		int nb = data.getInt();
 		GroupMsg g = server.createGroup(ownerId);
 		for (int i = 0; i < nb; i++) {
 			g.addMember(server.getUser(data.getInt()));
+		}
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		DataOutputStream dos = new DataOutputStream(baos);
+		dos.writeByte(1); // Byte pour le type de réponse
+		dos.writeInt(g.getId()); // ID du groupe
+		dos.flush();
+		byte[] groupCreatedResponse = baos.toByteArray();
+
+		// Envoyez le paquet de réponse au client
+		Packet responsePacket = new Packet(ServerMsg.SERVER_CLIENTID, ownerId, groupCreatedResponse);
+		UserMsg owner = server.getUser(ownerId);
+		if (owner != null) {
+			owner.process(responsePacket);
 		}
 	}
 
@@ -107,8 +123,6 @@ public class ServerPacketProcessor implements PacketProcessor {
 
 //	addMember(p.srcId, groupId, userId);
 	private void addMember(int srcId, int groupId, int userId) {
-		//int groupId = data.getInt();
-		//int userId = data.getInt();
 		GroupMsg group = server.getGroup(groupId);
 		if (group != null) {
 			UserMsg user = server.getUser(userId);

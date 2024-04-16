@@ -13,7 +13,9 @@ package fr.uga.miashs.dciss.chatservice.server;
 
 import fr.uga.miashs.dciss.chatservice.common.Packet;
 
+import java.io.IOException;
+
 public interface PacketProcessor {
 
-	public void process(Packet p);
+	public void process(Packet p) throws IOException;
 }
