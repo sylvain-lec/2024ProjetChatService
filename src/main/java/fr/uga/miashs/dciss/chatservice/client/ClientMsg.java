@@ -197,7 +197,7 @@ public class ClientMsg {
 		System.out.println("Vous êtes : " + c.getIdentifier());
 
 		// Thread.sleep(5000);
-
+/*
 		// l'utilisateur avec id 4 crée un grp avec 1 et 3 dedans (et lui meme)
 		if (c.getIdentifier() == 4) {
 			ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -214,26 +214,74 @@ public class ClientMsg {
 			dos.flush();
 
 			c.sendPacket(0, bos.toByteArray());
+		}
 
+		// le user 5 supprime le groupe -1 créé par le user 4
+		if (c.getIdentifier() == 5) {
+			ByteArrayOutputStream bos = new ByteArrayOutputStream();
+			DataOutputStream dos = new DataOutputStream(bos);
+
+			// byte 2 : delete group on server
+			dos.writeByte(2);
+			// id group
+			dos.writeInt(-1);
+			dos.flush();
+			c.sendPacket(0, bos.toByteArray());
 		}
 		
-		
+		*/
 
 		Scanner sc = new Scanner(System.in);
 		String lu = null;
 		while (!"\\quit".equals(lu)) {
 			try {
-				System.out.println("A qui voulez vous écrire ? ");
-				int dest = Integer.parseInt(sc.nextLine());
+				System.out.println("\nQue souhaitez-vous faire? \n0 : envoyer un message\n1 : créer un groupe\n2 : supprimer un groupe\n");
+				int truc = Integer.parseInt(sc.nextLine());
+				if (truc == 0) {
+					System.out.println("\nA qui voulez vous écrire ? ");
+					int dest = Integer.parseInt(sc.nextLine());
+					System.out.println("\nVotre message ? ");
+					lu = sc.nextLine();
+					c.sendPacket(dest, lu.getBytes());
+				}
+				else if (truc == 1) {
+					ByteArrayOutputStream bos = new ByteArrayOutputStream();
+					DataOutputStream dos = new DataOutputStream(bos);
 
-				System.out.println("Votre message ? ");
-				lu = sc.nextLine();
-				c.sendPacket(dest, lu.getBytes());
+					// byte 1 : create group on server
+					dos.writeByte(1);
+					System.out.println("\nhow many members?");
+					int nb = Integer.parseInt(sc.nextLine()); // nb members
+					dos.writeInt(nb);
+
+					// list of members
+					for (int i = 0 ; i < nb ; i++) {
+						System.out.println("add a member : (type 0 to exit)");
+						dos.writeInt(Integer.parseInt(sc.nextLine()));
+					}
+
+					dos.flush();
+
+					c.sendPacket(0, bos.toByteArray());
+				}
+				else if (truc == 2) {
+					ByteArrayOutputStream bos = new ByteArrayOutputStream();
+					DataOutputStream dos = new DataOutputStream(bos);
+
+					// byte 2 : delete group on server
+					dos.writeByte(2);
+					// id group
+					System.out.println("quel groupe ?");
+					dos.writeInt(Integer.parseInt(sc.nextLine()));
+					dos.flush();
+					c.sendPacket(0, bos.toByteArray());
+				}
 			} catch (InputMismatchException | NumberFormatException e) {
 				System.out.println("Mauvais format");
 			}
+			}
 
-		}
+
 
 		/*
 		 * int id =1+(c.getIdentifier()-1) % 2; System.out.println("send to "+id);

@@ -63,9 +63,11 @@ public class ServerMsg {
 	}
 	
 	public boolean removeGroup(int groupId) {
+		//TODO : implementation de la gestion des droits?
 		GroupMsg g =groups.remove(groupId);
 		if (g==null) return false;
 		g.beforeDelete();
+		LOG.info("Le groupe " + groupId + " a été supprimé");
 		return true;
 	}
 	
@@ -77,8 +79,14 @@ public class ServerMsg {
 	}
 	
 	public UserMsg getUser(int userId) {
+
 		return users.get(userId);
 	}
+
+	public GroupMsg getGroup(int groupId) {
+		return groups.get(groupId);
+	}
+
 	
 	// Methode utilisée pour savoir quoi faire d'un paquet
 	// reçu par le serveur
@@ -88,6 +96,10 @@ public class ServerMsg {
 			// can be send only if sender is member
 			UserMsg sender = users.get(p.srcId);
 			GroupMsg g = groups.get(p.destId);
+			//TODO : il faut informer l'expéditeur si le destinataire n'existe pas
+			//if (g == null) {
+			//	LOG.info("ce destinataire n'existe pas");
+			//}
 			if (g.getMembers().contains(sender)) pp=g;
 		}
 		else if (p.destId > 0) { // message entre utilisateurs
