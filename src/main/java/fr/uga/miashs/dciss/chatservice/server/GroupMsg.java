@@ -34,6 +34,9 @@ public class GroupMsg implements PacketProcessor {
 	public int getId() {
 		return groupId;
 	}
+
+	public UserMsg getOwner() { return owner; }
+
 	
 	/**
 	 * This method has to be used to add a member to the group.
@@ -76,6 +79,7 @@ public class GroupMsg implements PacketProcessor {
 	 */
 	public void beforeDelete() {
 		members.forEach(m->m.getGroups().remove(this));
+		//TODO : notifier les membres de la suppression du groupe
 	}
 
 }
