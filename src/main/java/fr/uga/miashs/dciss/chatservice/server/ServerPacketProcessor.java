@@ -35,6 +35,10 @@ public class ServerPacketProcessor implements PacketProcessor {
 			createGroup(p.srcId, buf);
 		} else if (type == 2) { //cas suppression de groupe
 			removeGroup(p);
+		} else if (type == 3) { // cas ajout de membre dans un groupe
+			int groupId = buf.getInt(); // ID du groupe
+			int userId = buf.getInt(); // ID de l'utilisateur
+			addMember(p.srcId, groupId, userId);
 		}
 		//dans le cas où le type n'est pas déterminé
 		else {
@@ -98,6 +102,60 @@ public class ServerPacketProcessor implements PacketProcessor {
 				}
 				server.removeGroup(groupId);
 			}
+		}
+	}
+
+//	addMember(p.srcId, groupId, userId);
+	private void addMember(int srcId, int groupId, int userId) {
+		//int groupId = data.getInt();
+		//int userId = data.getInt();
+		GroupMsg group = server.getGroup(groupId);
+		if (group != null) {
+			UserMsg user = server.getUser(userId);
+			if (user != null) {
+				group.addMember(user);
+				// Envoyer une notification ou une confirmation si nécessaire
+				//msg à envoyer, converti en bytes
+				String msg = "L'utilisateur " + userId + " a été ajouté au groupe " + groupId;
+				byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8);
+
+				//longueur du msg à envoyer
+				int length = msg.getBytes().length;
+
+				// Create a byte buffer with 4 extra bytes for the length
+				ByteBuffer buffer = ByteBuffer.allocate(4 + length);
+
+				// Put the length and the text bytes into the buffer
+				buffer.putInt(length);
+				buffer.put(msgBytes);
+
+				// nv tableau qui concatène la longueur du msg et le msg lui-même
+				byte[] data = buffer.array();
+
+				for (UserMsg u : group.getMembers()) {
+					Packet reponse = new Packet(0, u.getId(), data);
+					u.process(reponse);
+				}
+			} else {
+				LOG.warning("Attempt to add non-existent user " + userId + " to group " + groupId);
+			}
+		} else {
+			LOG.warning("Group " + groupId + " not found");
+		}
+	}
+	private void removeMember(int ownerId, ByteBuffer data) {
+		int groupId = data.getInt();
+		int userId = data.getInt();
+		GroupMsg group = server.getGroup(groupId);
+		if (group != null) {
+			UserMsg user = server.getUser(userId);
+			if (user != null) {
+				group.removeMember(user);
+			} else {
+				LOG.warning("Attempt to remove non-existent user " + userId + " from group " + groupId);
+			}
+		} else {
+			LOG.warning("Group " + groupId + " not found");
 		}
 	}
 }
