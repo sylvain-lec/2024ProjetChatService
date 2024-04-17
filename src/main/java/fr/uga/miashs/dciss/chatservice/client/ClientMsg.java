@@ -37,6 +37,7 @@ public class ClientMsg {
 	private DataInputStream dis;
 
 	private int identifier;
+	private String username;
 
 	private List<MessageListener> mListeners;
 	private List<ConnectionListener> cListeners;
@@ -103,6 +104,27 @@ public class ClientMsg {
 	public int getIdentifier() {
 		return identifier;
 	}
+	public String getUsername() { return username; }
+	public void setUsername(String username) {
+		this.username = username;
+
+		//send packet to the server; the server will update the username.
+		//1byte for the type (4), 4bytes for the id, 4bytes (an int) for the length of the username, then the username
+		ByteArrayOutputStream bos = new ByteArrayOutputStream();
+		DataOutputStream dos = new DataOutputStream(bos);
+		try {
+			dos.writeByte(4);
+			dos.writeInt(identifier);
+			dos.writeInt(username.length());
+			dos.writeUTF(username);
+			dos.flush();
+			sendPacket(0, bos.toByteArray());
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+
 
 	/**
 	 * Method to be called to establish the connection.
@@ -117,6 +139,7 @@ public class ClientMsg {
 				dos = new DataOutputStream(s.getOutputStream());
 				dis = new DataInputStream(s.getInputStream());
 				dos.writeInt(identifier);
+			//	dos.writeUTF(username);
 				dos.flush();
 				if (identifier == 0) {
 					identifier = dis.readInt();
@@ -199,6 +222,12 @@ public class ClientMsg {
 		// Thread.sleep(5000);
 
 		Scanner sc = new Scanner(System.in);
+
+		System.out.println("Entrez votre nom d'utilisateur : ");
+		String username = sc.nextLine();
+		c.setUsername(username) ;
+		System.out.println("Vous êtes " + c.getUsername());
+
 		String lu = null;
 		while (!"\\quit".equals(lu)) {
 			try {
@@ -261,6 +290,7 @@ public class ClientMsg {
 					c.sendPacket(0, bos.toByteArray());
 
 				}
+
 			} catch (InputMismatchException | NumberFormatException e) {
 				System.out.println("Mauvais format");
 			}

@@ -132,7 +132,9 @@ public class ServerMsg {
 					userId = nextUserId.getAndIncrement();
 					dos.writeInt(userId);
 					dos.flush();
-					users.put(userId, new UserMsg(userId, this));
+					//j'ajoute un username par défaut, du type user3. le constructeur de UserMsg prend mtn aussi une string en paramètre.
+					String username = dis.readUTF();
+					users.put(userId, new UserMsg(userId, this, username));
 				}
 				// si l'identifiant existe ou est nouveau alors 
 				// deux "taches"/boucles  sont lancées en parralèle
@@ -140,7 +142,7 @@ public class ServerMsg {
 				// une pour envoyer des messages au client
 				// les deux boucles sont gérées au niveau de la classe UserMsg
 				UserMsg x = users.get(userId);
-				if (x!= null && x.open(s)) {
+				if (x!= null && x.open(s, x.getUsername())) {
 					LOG.info(userId + " connected");
 					// lancement boucle de reception
 					executor.submit(() -> x.receiveLoop());

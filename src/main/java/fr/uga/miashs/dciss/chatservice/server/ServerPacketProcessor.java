@@ -52,6 +52,44 @@ public class ServerPacketProcessor implements PacketProcessor {
 		for (int i = 0; i < nb; i++) {
 			g.addMember(server.getUser(data.getInt()));
 		}
+		//Packet qui informe le owner que le groupe a été créé
+		String msgOwner = "Vous avez créé le groupe " + g.getId() ;
+		byte[] msgOwnerBytes = msgOwner.getBytes(StandardCharsets.UTF_8);//msg à envoyer, converti en bytes
+		int length = msgOwner.getBytes().length;
+		// bytebuffer
+		ByteBuffer buffer = ByteBuffer.allocate(4 + length);
+		buffer.putInt(length);
+		buffer.put(msgOwnerBytes);
+		// nv tableau qui concatène la longueur du msg et le msg lui-même
+		byte[] dataMsg = buffer.array();
+
+		Packet reponse = new Packet(0, ownerId, dataMsg);
+		server.getUser(ownerId).process(reponse);
+
+		// packet qui informe les autres membres du groupe de la création du groupe
+		String msg = "Le groupe " + g.getId() + " a été créé par le user " + ownerId + ". Les membres sont : ";
+		for (UserMsg u : g.getMembers()) { //ajouter à la string le userid de chaque membre.
+			msg += u.getId() + ", ";
+		}
+
+		byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8); //msg à envoyer, converti en bytes
+		int length2 = msg.getBytes().length; //longueur du msg à envoyer
+
+// bytebuffer
+		ByteBuffer buffer2 = ByteBuffer.allocate(4 + length2);
+		buffer2.putInt(length2);
+		buffer2.put(msgBytes);
+// nv tableau qui concatène la longueur du msg et le msg lui-même
+		byte[] dataMsg2 = buffer2.array();
+
+		//send to everyone, except to the owner
+for (UserMsg u : g.getMembers()) {
+			if (u.getId() != ownerId) {
+				Packet reponse2 = new Packet(0, u.getId(), dataMsg2);
+				u.process(reponse2);
+			}
+		}
+
 	}
 
 	/**
@@ -69,13 +107,48 @@ public class ServerPacketProcessor implements PacketProcessor {
 		//on récupère le groupe associé à ce groupId
 		GroupMsg groupe = server.getGroup(groupId);
 		if (groupe == null) {
-			/* TODO : informer le sender que le groupe n'existe pas */
-			LOG.info("le groupe " + groupId + " n'existe pas");
+
+			// informer le sender par un packet que le groupe n'existe pas
+			String msg = "Le groupe " + groupId + " n'existe pas";
+			byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8); //msg à envoyer, converti en bytes
+			int length = msg.getBytes().length; //longueur du msg à envoyer
+
+			// créer un buffer avec 4 extra bytes pour la longueur
+			ByteBuffer buffer = ByteBuffer.allocate(4 + length);
+			buffer.putInt(length);
+			buffer.put(msgBytes);
+
+			// nv tableau qui concatène la longueur du msg et le msg lui-même
+			byte[] data = buffer.array();
+
+			Packet reponse = new Packet(0, src, data); //on forme le packet
+			server.getUser(src).process(reponse); //on l'envoie
+
+			LOG.info("userId " + src + " a essayé de supprimer le groupe " + groupId + " qui n'existe pas"); //Trace pour le serveur
 		} else { //le groupe existe
 			// vérifier que le sender est le owner
 			if (src != groupe.getOwner().getId()) {
-				//TODO : informer le sender qu'il n'a pas les droits pour supprimer les groupes
 				LOG.info("le sender " + src + " n'est pas le propriétaire du groupe " + groupId);
+				//informer le sender par un packet qu'il n'a pas les droits pour supprimer les groupes
+				String msg = "Vous n'avez pas les droits pour supprimer le groupe " + groupId;
+				byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8);
+
+				//longueur du msg à envoyer
+				int length = msg.getBytes().length;
+
+				// Create a byte buffer with 4 extra bytes for the length
+				ByteBuffer buffer = ByteBuffer.allocate(4 + length);
+
+				// Put the length and the text bytes into the buffer
+				buffer.putInt(length);
+				buffer.put(msgBytes);
+
+				// nv tableau qui concatène la longueur du msg et le msg lui-même
+				byte[] data = buffer.array();
+
+				Packet reponse = new Packet(0, src, data);
+				server.getUser(src).process(reponse);
+
 			}
 			else { //le sender est le owner
 				//msg à envoyer, converti en bytes
