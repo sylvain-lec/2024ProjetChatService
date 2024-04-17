@@ -15,7 +15,7 @@ public class Chat {
     private JFrame frame;
     private JPanel topPanel;
     private JPanel leftTopPanel;
-    private PlaceholderTextField searchField; // Changed to PlaceholderTextField
+    private PlaceholderTextField searchField;
     private JPanel rightTopPanel;
     private JLabel profileLabel;
 
@@ -45,7 +45,7 @@ public class Chat {
         leftTopPanel = new JPanel();
         searchField = new PlaceholderTextField(14);
         searchField.setFocusable(false);
-        searchField.setPlaceholder("Rechercher"); // Set the placeholder text
+        searchField.setPlaceholder("Rechercher");
         leftTopPanel.add(searchField);
 
         rightTopPanel = new JPanel();
@@ -94,7 +94,7 @@ public class Chat {
         contactList.setSelectedIndex(0);
 
         JScrollPane contactListScrollPane = new JScrollPane(contactList);
-        contactListScrollPane.setPreferredSize(new Dimension(200, 600)); // Set your preferred width and height
+        contactListScrollPane.setPreferredSize(new Dimension(200, 600));
         leftPanel.add(contactListScrollPane, BorderLayout.CENTER);
         // Add listener for double-click on contact list
         contactList.addMouseListener(new MouseAdapter() {
@@ -118,8 +118,8 @@ public class Chat {
         JPanel inputPanel = new JPanel();
         inputPanel.setLayout(new BorderLayout());
 
-        messageInput = new PlaceholderTextField(); // Changed to PlaceholderTextField
-        messageInput.setPlaceholder("Vos messages..."); // Set the placeholder text
+        messageInput = new PlaceholderTextField();
+        messageInput.setPlaceholder("Vos messages...");
 
         inputPanel.add(messageInput, BorderLayout.CENTER);
 
@@ -157,13 +157,13 @@ public class Chat {
         if (!message.isEmpty()) {
             chatArea.append("Vous: " + message + "\n");  // Display the message in the chat area
             messageInput.setText("");  // Clear the text input field
-            // Here, you would send the message to the server in a real application
+            // Here, send the message to the server in a real application
         }
     }
 
     private void customizeUIComponents() {
         // Personalization of the side bar
-        leftPanel.setBackground(Color.WHITE); // Set the background color to white or any other light color
+        leftPanel.setBackground(Color.WHITE);
 
         // Personalization of the contact list
         contactList.setFixedCellHeight(60); // Fixed height for each cell
