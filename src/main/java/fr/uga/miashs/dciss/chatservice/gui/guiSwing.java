@@ -18,6 +18,6 @@ public class guiSwing {
     public static void main(String[] args) {
         // Import FlatLaf
         FlatLightLaf.setup();
-        // create UI here...
+
     }
 }
