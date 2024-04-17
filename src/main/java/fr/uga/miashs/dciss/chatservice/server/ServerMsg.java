@@ -82,6 +82,19 @@ public class ServerMsg {
 		return users.get(userId);
 	}
 
+	/**
+	 * Get the username of a user by its id
+	 * @param userId
+	 * @return username
+	 */
+	public String getUsernameByUserId(int userId) {
+		UserMsg user = users.get(userId);
+		if (user != null) {
+			return user.getUsername();
+		}
+		return null; // or throw an exception
+	}
+
 	//get users names and id
 	public String getUsers() {
 		String res = "";

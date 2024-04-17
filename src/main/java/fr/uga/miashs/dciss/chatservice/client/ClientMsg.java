@@ -51,7 +51,7 @@ public class ClientMsg {
 	 * @param address The server address or hostname
 	 * @param port    The port number
 	 */
-	public ClientMsg(int id, String address, int port) {
+	public ClientMsg(int id, String address, int port, String username) {
 		if (id < 0)
 			throw new IllegalArgumentException("id must not be less than 0");
 		if (port <= 0)
@@ -61,6 +61,7 @@ public class ClientMsg {
 		identifier = id;
 		mListeners = new ArrayList<>();
 		cListeners = new ArrayList<>();
+		this.username = username;
 	}
 
 	/**
@@ -71,7 +72,7 @@ public class ClientMsg {
 	 * @param port    The port number
 	 */
 	public ClientMsg(String address, int port) {
-		this(0, address, port);
+		this(0, address, port, "defaultUsername");
 	}
 
 	/**
@@ -213,12 +214,12 @@ public class ClientMsg {
 
 		// add a dummy listener that print the content of message as a string
 		c.addMessageListener(p -> System.out.println(p.srcId + " says to " + p.destId + ": " + new String(p.data)));
-		
+
 		// add a connection listener that exit application when connection closed
 		c.addConnectionListener(active ->  {if (!active) System.exit(0);});
 
 		c.startSession();
-		System.out.println("Vous êtes : " + c.getIdentifier());
+		System.out.println("Vous êtes : " + c.getUsername());
 
 		// Thread.sleep(5000);
 
@@ -232,7 +233,7 @@ public class ClientMsg {
 		String lu = null;
 		while (!"\\quit".equals(lu)) {
 			try {
-				System.out.println("\nQue souhaitez-vous faire? \n0 : envoyer un message\n1 : créer un groupe\n2 : supprimer un groupe\n3 : ajouter un membre à un groupe\n4 : supprimer un membre d'un groupe\n5 : changer de nom\n");
+				System.out.println("\n" + c.getUsername()+ ", que souhaitez-vous faire? \n0 : envoyer un message\n1 : créer un groupe\n2 : supprimer un groupe\n3 : ajouter un membre à un groupe\n4 : supprimer un membre d'un groupe\n5 : changer de nom\n");
 				int code = Integer.parseInt(sc.nextLine());
 				if (code == 0) { //envoyer un msg
 					System.out.println("\nA qui voulez vous écrire ? ");
