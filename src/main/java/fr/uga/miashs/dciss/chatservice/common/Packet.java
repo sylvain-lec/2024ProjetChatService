@@ -26,6 +26,10 @@ public class Packet {
 		this.destId = destId;
 		this.data = data;
 	}
+
+	public byte getType() {
+		return data[0];
+	}
 	
 	
 }

@@ -24,6 +24,7 @@ public class UserMsg implements PacketProcessor{
 	private final static Logger LOG = Logger.getLogger(UserMsg.class.getName());
 	
 	private int userId;
+	private String username;
 	private Set<GroupMsg> groups;
 	
 	private ServerMsg server;
@@ -31,19 +32,27 @@ public class UserMsg implements PacketProcessor{
 	private transient boolean active;
 	
 	private BlockingQueue<Packet> sendQueue;
-	
-	public UserMsg(int clientId, ServerMsg server) {
+
+	/**
+	 *
+	 * @param clientId
+	 * @param server
+	 * @param username : default username given by the server (in ServerMsg) is "user"+clientId
+	 */
+	public UserMsg(int clientId, ServerMsg server, String username) {
 		if (clientId<1) throw new IllegalArgumentException("id must not be less than 0");
 		this.server=server;
 		this.userId=clientId;
 		active=false;
 		sendQueue = new LinkedBlockingQueue<>();
 		groups = Collections.synchronizedSet(new HashSet<>());
+		this.username = username;
 	}
 	
 	public int getId() {
 		return userId;
 	}
+	public String getUsername() { return username; }
 	
 	public boolean removeGroup(GroupMsg g) {
 		if (groups.remove(g)) {
@@ -70,9 +79,10 @@ public class UserMsg implements PacketProcessor{
 	/*
 	 * METHODS FOR MANAING THE CONNECTION
 	 */
-	public boolean open(Socket s) {
+	public boolean open(Socket s, String username) {
 		if (active) return false;
 		this.s=s;
+		this.username = username;
 		active=true;
 		return true;
 	}
