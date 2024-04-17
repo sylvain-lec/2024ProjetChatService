@@ -42,6 +42,7 @@ public class ContactListGUI {
     public ContactListGUI() {
         initializeUI();
         contactDAO = new ContactDAO(); // Initialize ContactDAO
+        contactDAO.createContactsTable(); // Create the contacts table if it doesn't exist
         populateContactList(); // Populate the contact list when the GUI is initialized
     }
 

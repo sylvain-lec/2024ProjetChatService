@@ -18,7 +18,8 @@ public class ContactDAO {
         }
     }
 
-     private static final String URL = "jdbc:sqlite:C:\\Bureau\\ChatServer\\database.sqlite";
+    //path to my database
+     private static final String URL = "jdbc:sqlite:./database.db";
 
 
     // Méthode pour récupérer tous les contacts depuis la base de données
@@ -40,6 +41,20 @@ public class ContactDAO {
         }
 
         return contacts;
+    }
+
+    public void createContactsTable() {
+        try (Connection connection = DriverManager.getConnection(URL)) {
+            PreparedStatement statement = connection.prepareStatement(
+                    "CREATE TABLE IF NOT EXISTS contacts (" +
+                            "id INTEGER PRIMARY KEY," +
+                            "nickname TEXT" +
+                            ")"
+            );
+            statement.execute();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     // Méthode pour insérer un nouveau contact dans la base de données
