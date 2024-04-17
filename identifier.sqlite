@@ -1,0 +1,53 @@
+CREATE TABLE IF NOT EXISTS users (
+    ID_utilisateur INT PRIMARY KEY AUTO_INCREMENT,
+    prenom VARCHAR(50),
+    nom VARCHAR(50),
+    email VARCHAR(100) UNIQUE,
+    password VARCHAR(100)
+);
+
+
+CREATE TABLE IF NOT EXISTS contacts (
+    ID_contact INT PRIMARY KEY AUTO_INCREMENT,
+    ID_utilisateur INT,
+    prenom VARCHAR(255),
+    nom VARCHAR(255),
+    ID_contact_utilisateur INT,
+    FOREIGN KEY (ID_utilisateur) REFERENCES users(ID_utilisateur),
+    FOREIGN KEY (ID_contact_utilisateur) REFERENCES users(ID_utilisateur)
+);
+
+CREATE TABLE IF NOT EXISTS groupes (
+    ID_groupe INT PRIMARY KEY AUTO_INCREMENT,
+    nom VARCHAR(255)
+);
+
+CREATE TABLE IF NOT EXISTS membresGroupe (
+    ID_membre INT PRIMARY KEY AUTO_INCREMENT,
+    ID_utilisateur INT,
+    ID_groupe INT,
+    FOREIGN KEY (ID_utilisateur) REFERENCES users(ID_utilisateur),
+    FOREIGN KEY (ID_groupe) REFERENCES groupes(ID_groupe)
+);
+
+CREATE TABLE IF NOT EXISTS conversations (
+    ID_conversation INT PRIMARY KEY AUTO_INCREMENT,
+    ID_utilisateur1 INT,
+    ID_utilisateur2 INT,
+    ID_groupe INT,
+    nom_conversation VARCHAR(255);
+    date_creation DATETIME;
+    FOREIGN KEY (ID_utilisateur1) REFERENCES users(ID_utilisateur),
+    FOREIGN KEY (ID_utilisateur2) REFERENCES users(ID_utilisateur),
+    FOREIGN KEY (ID_groupe) REFERENCES groupes(ID_groupe)
+);
+
+CREATE TABLE IF NOT EXISTS messages (
+    ID_message INT PRIMARY KEY AUTO_INCREMENT,
+    ID_conversation INT,
+    ID_utilisateur INT,
+    Contenu TEXT,
+    Date_envoi DATETIME,
+    FOREIGN KEY (ID_conversation) REFERENCES conversations(ID_conversation),
+    FOREIGN KEY (ID_utilisateur) REFERENCES users(ID_utilisateur)
+);

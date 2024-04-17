@@ -215,7 +215,7 @@ public class ClientMsg {
 		String lu = null;
 		while (!"\\quit".equals(lu)) {
 			try {
-				System.out.println("\nQue souhaitez-vous faire? \n0 : envoyer un message\n1 : créer un groupe\n2 : supprimer un groupe\n3 : ajouter un membre à un groupe\n");
+				System.out.println("\nQue souhaitez-vous faire? \n0 : envoyer un message\n1 : créer un groupe\n2 : supprimer un groupe\n3 : ajouter un membre à un groupe\n4 : supprimer un membre d'un groupe\n");
 				int code = Integer.parseInt(sc.nextLine());
 				if (code == 0) { //envoyer un msg
 					System.out.println("\nA qui voulez vous écrire ? ");
@@ -273,6 +273,21 @@ public class ClientMsg {
 					dos.flush();
 					c.sendPacket(0, bos.toByteArray());
 
+				}
+				else if (code == 4) { //supprimer un membre d'un groupe
+					ByteArrayOutputStream bos = new ByteArrayOutputStream();
+					DataOutputStream dos = new DataOutputStream(bos);
+
+					// byte 4 : delete member from group on server
+					dos.writeByte(4);
+					// id group
+					System.out.println("quel groupe ?");
+					dos.writeInt(Integer.parseInt(sc.nextLine()));
+					// id user
+					System.out.println("quel utilisateur ?");
+					dos.writeInt(Integer.parseInt(sc.nextLine()));
+					dos.flush();
+					c.sendPacket(0, bos.toByteArray());
 				}
 			} catch (InputMismatchException | NumberFormatException e) {
 				System.out.println("Mauvais format");

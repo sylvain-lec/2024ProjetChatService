@@ -43,6 +43,10 @@ public class ServerPacketProcessor implements PacketProcessor {
 			int userId = buf.getInt(); // ID de l'utilisateur
 			addMember(p.srcId, groupId, userId);
 		}
+		else if (type == 4) { // cas suppression de membre dans un groupe
+			removeMember(p.srcId, buf);
+		}
+		
 		//dans le cas où le type n'est pas déterminé
 		else {
 			LOG.warning("Server message of type=" + type + " not handled by procesor");

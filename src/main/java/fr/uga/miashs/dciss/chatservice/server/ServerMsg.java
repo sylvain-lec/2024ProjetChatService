@@ -26,8 +26,8 @@ public class ServerMsg {
 	private final static Logger LOG = Logger.getLogger(ServerMsg.class.getName());
 	public final static int SERVER_CLIENTID = 0;
 
-	private transient ServerSocket serverSock;
-	private transient boolean started;
+	private transient ServerSocket serverSock;//This is because ServerSocket instances cannot be serialized, as they represent an open network connection and related system resources.
+	private transient boolean started;//This field indicates whether the server has been started or not. Marking it as transient ensures that its value is not saved or transmitted when the ServerMsg object is serialized. Instead, it will be initialized to its default value (false) when the object is deserialized.
 	private transient ExecutorService executor;
 	private transient ServerPacketProcessor sp;
 	
@@ -42,14 +42,14 @@ public class ServerMsg {
 	private AtomicInteger nextGroupId;
 
 	public ServerMsg(int port) throws IOException {
-		serverSock = new ServerSocket(port);
-		started = false;
-		users = new ConcurrentHashMap<>();
+		serverSock = new ServerSocket(port);//is used for accepting incoming connections from clients.
+		started = false;// indicating that the server is not yet started.
+		users = new ConcurrentHashMap<>();//ConcurrentHashMap provides built-in thread safety mechanisms, allowing multiple threads to read and write to the map concurrently without the need for external synchronization.
 		groups = new ConcurrentHashMap<>(); 
 		nextUserId = new AtomicInteger(1);
 		nextGroupId = new AtomicInteger(-1);
-		sp = new ServerPacketProcessor(this);
-		executor = Executors.newCachedThreadPool();
+		sp = new ServerPacketProcessor(this);//passing this reference to provide access to the current ServerMsg instance.
+		executor = Executors.newCachedThreadPool();//This thread pool will be used to manage the execution of tasks related to handling client connections and message processing.
 	}
 
 	public GroupMsg createGroup(int ownerId) {
@@ -57,7 +57,7 @@ public class ServerMsg {
 		if (owner==null) throw new ServerException("User with id="+ownerId+" unknown. Group creation failed.");
 		int id = nextGroupId.getAndDecrement();
 		GroupMsg res = new GroupMsg(id,owner);
-		groups.put(id, res);
+		groups.put(id, res);//Adds the newly created group to the groups map, associating it with its group ID.
 		LOG.info("Group "+res.getId()+" created");
 		return res;
 	}
