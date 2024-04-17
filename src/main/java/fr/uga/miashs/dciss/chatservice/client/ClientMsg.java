@@ -11,6 +11,7 @@
 
 package fr.uga.miashs.dciss.chatservice.client;
 
+import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -19,6 +20,8 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import fr.uga.miashs.dciss.chatservice.common.Packet;
+
+import javax.imageio.ImageIO;
 
 /**
  * Manages the connection to a ServerMsg. Method startSession() is used to
@@ -316,6 +319,17 @@ public class ClientMsg {
 					System.out.println("Vous êtes " + c.getUsername());
 				}
 
+				else if (code == 6) { // Send an image
+					ByteArrayOutputStream bos = new ByteArrayOutputStream();
+					DataOutputStream dos = new DataOutputStream(bos);
+
+					dos.writeByte(6);
+					System.out.println("Adresse de l'image - format jpg:");
+					String imagePath = sc.nextLine();
+					BufferedImage image = ImageIO.read(new File(imagePath));
+					Packet packet = new Packet(c.getIdentifier(), 0, bos.toByteArray(), image);
+					c.sendPacket(0, packet.toByteArray());
+				}
 
 
 			} catch (InputMismatchException | NumberFormatException e) {
