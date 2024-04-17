@@ -11,13 +11,5 @@
 
 package fr.uga.miashs.dciss.chatservice.gui;
 
-import com.formdev.flatlaf.FlatLightLaf;
-
-public class guiSwing {
-
-    public static void main(String[] args) {
-        // Import FlatLaf
-        FlatLightLaf.setup();
-        // create UI here...
-    }
+public class OptionsGUI {
 }

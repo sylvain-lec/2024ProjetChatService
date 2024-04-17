@@ -24,6 +24,8 @@ public class UserMsg implements PacketProcessor{
 	private final static Logger LOG = Logger.getLogger(UserMsg.class.getName());
 	
 	private int userId;
+	private String username;
+	private String password;
 	private Set<GroupMsg> groups;
 	
 	private ServerMsg server;
@@ -31,19 +33,35 @@ public class UserMsg implements PacketProcessor{
 	private transient boolean active;
 	
 	private BlockingQueue<Packet> sendQueue;
-	
-	public UserMsg(int clientId, ServerMsg server) {
+
+	/**
+	 *
+	 * @param clientId
+	 * @param server
+	 * @param username : default username given by the server (in ServerMsg) is "user"+clientId
+	 */
+	public UserMsg(int clientId, ServerMsg server, String username, String password) {
 		if (clientId<1) throw new IllegalArgumentException("id must not be less than 0");
 		this.server=server;
 		this.userId=clientId;
 		active=false;
 		sendQueue = new LinkedBlockingQueue<>();
 		groups = Collections.synchronizedSet(new HashSet<>());
+		this.username = username;
+		this.password = password;
 	}
 	
 	public int getId() {
 		return userId;
 	}
+	public String getUsername() { return username; }
+
+	public void setUsername(String username) { this.username = username; }
+
+	public String getPassword() { return password; }
+
+	public boolean checkPassword(String password) { return this.password.equals(password); }
+
 	
 	public boolean removeGroup(GroupMsg g) {
 		if (groups.remove(g)) {
@@ -70,9 +88,10 @@ public class UserMsg implements PacketProcessor{
 	/*
 	 * METHODS FOR MANAING THE CONNECTION
 	 */
-	public boolean open(Socket s) {
+	public boolean open(Socket s, String username) {
 		if (active) return false;
 		this.s=s;
+		this.username = username;
 		active=true;
 		return true;
 	}
@@ -88,10 +107,16 @@ public class UserMsg implements PacketProcessor{
 		s=null;
 		LOG.info(userId + " deconnected");
 	}
-	
-	public boolean isConnected() {
+
+public boolean isConnected() {
 		return s!=null;
 	}
+
+//	//AUTHENTIFICATION. A ETE MODIFIE
+//	public boolean isConnected() {
+//		return s != null && s.isConnected() && !s.isClosed();
+//	}
+
 	
 	// boucle d'envoie
 	public void receiveLoop() {
@@ -151,5 +176,8 @@ public class UserMsg implements PacketProcessor{
 	public void process(Packet p) {
 		sendQueue.offer(p);
 	}
-	
+
+	public void setPassword(String password) {
+		this.password = password;
+	}
 }

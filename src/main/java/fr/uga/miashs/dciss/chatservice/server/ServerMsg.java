@@ -34,6 +34,8 @@ public class ServerMsg {
 	// maps pour associer les id aux users et groupes
 	private Map<Integer, UserMsg> users;
 	private Map<Integer, GroupMsg> groups;
+
+
 	
 	
 	
@@ -79,12 +81,38 @@ public class ServerMsg {
 	}
 	
 	public UserMsg getUser(int userId) {
-
 		return users.get(userId);
+	}
+
+	/**
+	 * Get the username of a user by its id
+	 * @param userId
+	 * @return username
+	 */
+	public String getUsernameByUserId(int userId) {
+		UserMsg user = users.get(userId);
+		if (user != null) {
+			return user.getUsername();
+		}
+		return null; // or throw an exception
+	}
+
+	//get users names and id
+	public String getUsers() {
+		String res = "";
+		for (UserMsg u : users.values()) {
+			res += u.getId() + " : " + u.getUsername() + "\n";
+		}
+		return res;
 	}
 
 	public GroupMsg getGroup(int groupId) {
 		return groups.get(groupId);
+	}
+
+	public boolean authenticateUser(int userId, String password) {
+		UserMsg user = users.get(userId);
+		return user != null && user.checkPassword(password);
 	}
 
 	
@@ -132,7 +160,8 @@ public class ServerMsg {
 					userId = nextUserId.getAndIncrement();
 					dos.writeInt(userId);
 					dos.flush();
-					users.put(userId, new UserMsg(userId, this));
+					//j'ajoute un username par défaut, du type user3. le constructeur de UserMsg prend mtn une string en paramètre.
+					users.put(userId, new UserMsg(userId, this, "user"+userId, "password"));
 				}
 				// si l'identifiant existe ou est nouveau alors 
 				// deux "taches"/boucles  sont lancées en parralèle
@@ -140,7 +169,7 @@ public class ServerMsg {
 				// une pour envoyer des messages au client
 				// les deux boucles sont gérées au niveau de la classe UserMsg
 				UserMsg x = users.get(userId);
-				if (x!= null && x.open(s)) {
+				if (x!= null && x.open(s, "user"+userId)) {
 					LOG.info(userId + " connected");
 					// lancement boucle de reception
 					executor.submit(() -> x.receiveLoop());
@@ -172,5 +201,6 @@ public class ServerMsg {
 		ServerMsg s = new ServerMsg(1666);
 		s.start();
 	}
+
 
 }

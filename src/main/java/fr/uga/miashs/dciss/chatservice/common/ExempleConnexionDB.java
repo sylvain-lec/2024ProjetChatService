@@ -19,7 +19,10 @@ public class ExempleConnexionDB {
 	public static void main(String[] args) {		
 		
 		try {
-			Connection cnx = DriverManager.getConnection("jdbc:derby:target/sample;create=true");//"jdbc:sqlite:sample.db");//
+			// Chargement du pilote SQLite JDBC
+			Class.forName("org.sqlite.JDBC");
+
+			Connection cnx = DriverManager.getConnection("jdbc:sqlite:sample.db");
 			cnx.createStatement().executeUpdate("DROP TABLE MsgUser");
 			cnx.createStatement().executeUpdate("CREATE TABLE MsgUser (id INT PRIMARY KEY, nickname VARCHAR(20))");
 
@@ -42,8 +45,10 @@ public class ExempleConnexionDB {
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}
+		} catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
 
-	}
+    }
 
 }
