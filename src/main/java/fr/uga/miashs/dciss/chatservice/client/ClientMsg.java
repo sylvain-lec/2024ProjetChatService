@@ -14,6 +14,7 @@ package fr.uga.miashs.dciss.chatservice.client;
 import java.io.*;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -109,16 +110,16 @@ public class ClientMsg {
 		this.username = username;
 
 		//send packet to the server; the server will update the username.
-		//1byte for the type (4), 4bytes for the id, 4bytes (an int) for the length of the username, then the username
+		//1byte for the type (4), 4bytes (an int) for the length of the username, then the username
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		DataOutputStream dos = new DataOutputStream(bos);
 		try {
-			dos.writeByte(4);
-			dos.writeInt(identifier);
+			dos.writeByte(5);
 			dos.writeInt(username.length());
-			dos.writeUTF(username);
+			dos.write(username.getBytes(StandardCharsets.UTF_8));
 			dos.flush();
 			sendPacket(0, bos.toByteArray());
+			System.out.println("packet for username update sent to server");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -222,16 +223,16 @@ public class ClientMsg {
 		// Thread.sleep(5000);
 
 		Scanner sc = new Scanner(System.in);
-
+/*
 		System.out.println("Entrez votre nom d'utilisateur : ");
 		String username = sc.nextLine();
 		c.setUsername(username) ;
 		System.out.println("Vous êtes " + c.getUsername());
-
+*/
 		String lu = null;
 		while (!"\\quit".equals(lu)) {
 			try {
-				System.out.println("\nQue souhaitez-vous faire? \n0 : envoyer un message\n1 : créer un groupe\n2 : supprimer un groupe\n3 : ajouter un membre à un groupe\n");
+				System.out.println("\nQue souhaitez-vous faire? \n0 : envoyer un message\n1 : créer un groupe\n2 : supprimer un groupe\n3 : ajouter un membre à un groupe\n4 : supprimer un membre d'un groupe\n5 : changer de nom\n");
 				int code = Integer.parseInt(sc.nextLine());
 				if (code == 0) { //envoyer un msg
 					System.out.println("\nA qui voulez vous écrire ? ");
@@ -240,7 +241,7 @@ public class ClientMsg {
 					lu = sc.nextLine();
 					c.sendPacket(dest, lu.getBytes());
 				}
-				else if (code == 1) {
+				else if (code == 1) { //creer un groupe
 					ByteArrayOutputStream bos = new ByteArrayOutputStream();
 					DataOutputStream dos = new DataOutputStream(bos);
 
@@ -260,6 +261,7 @@ public class ClientMsg {
 
 					c.sendPacket(0, bos.toByteArray());
 				}
+
 				else if (code == 2) { //supprimer un groupe
 					ByteArrayOutputStream bos = new ByteArrayOutputStream();
 					DataOutputStream dos = new DataOutputStream(bos);
@@ -288,8 +290,32 @@ public class ClientMsg {
 					dos.writeInt(userId);
 					dos.flush();
 					c.sendPacket(0, bos.toByteArray());
-
 				}
+
+				else if (code == 4) { //supprimer un membre d'un groupe
+					ByteArrayOutputStream bos = new ByteArrayOutputStream();
+					DataOutputStream dos = new DataOutputStream(bos);
+
+					dos.writeByte(4); //premier byte à 4 pour supprimer un membre
+					System.out.println("\nDans quel groupe voulez-vous supprimer un membre?");
+					int idGroup = Integer.parseInt(sc.nextLine()); // idGroup
+					dos.writeInt(idGroup);
+
+					System.out.println("\nQuel utilisateur voulez-vous supprimer ?");
+					int userId = Integer.parseInt(sc.nextLine());
+					dos.writeInt(userId);
+					dos.flush();
+					c.sendPacket(0, bos.toByteArray());
+				}
+
+				else if (code == 5) { //changer de nom
+					System.out.println("\nNouveau nom d'utilisateur : ");
+					String newUsername = sc.nextLine();
+					c.setUsername(newUsername);
+					System.out.println("Vous êtes " + c.getUsername());
+				}
+
+
 
 			} catch (InputMismatchException | NumberFormatException e) {
 				System.out.println("Mauvais format");

@@ -27,22 +27,45 @@ public class ServerPacketProcessor implements PacketProcessor {
 
 	@Override
 	public void process(Packet p) {
+		LOG.info("PACKET RECU DANS process() de ServerPacketProcessor");
+
 		// ByteBufferVersion. On aurait pu utiliser un ByteArrayInputStream + DataInputStream à la place
 		ByteBuffer buf = ByteBuffer.wrap(p.data);
 		byte type = buf.get();
 
+		//PAQUET BIEN ENVOYE dans setUsername de ClientMsg mais PAS RECU ICI
 		if (type == 1) { // cas creation de groupe
 			createGroup(p.srcId, buf);
-		} else if (type == 2) { //cas suppression de groupe
+		}
+		else if (type == 2) { //cas suppression de groupe
 			removeGroup(p);
-		} else if (type == 3) { // cas ajout de membre dans un groupe
+		}
+		else if (type == 3) { // cas ajout de membre dans un groupe
 			int groupId = buf.getInt(); // ID du groupe
 			int userId = buf.getInt(); // ID de l'utilisateur
 			addMember(p.srcId, groupId, userId);
 		}
-		//dans le cas où le type n'est pas déterminé
+		else if (type == 4) { // cas suppression de membre dans un groupe
+			removeMember(p.srcId, buf);
+		}
+		else if (type == 5) { //cas mettre a jour le username
+			int userId = p.srcId; //id du user
+			int length = buf.getInt();
+			byte[] usernameBytes = new byte[length];
+			buf.get(usernameBytes);
+			String username = new String(usernameBytes, StandardCharsets.UTF_8);
+
+			//on met à jour le username côté serveur (setUsername() de la classe UserMsg)
+			server.getUser(userId).setUsername(username);
+			LOG.info("userId " + userId + " a mis à jour son username en " + username);
+
+			//TRACE : print every userid and their username
+			LOG.info(server.getUsers());
+		}
+
+			//dans le cas où le type n'est pas déterminé
 		else {
-			LOG.warning("Server message of type=" + type + " not handled by procesor");
+				LOG.warning("Server message of type=" + type + " not handled by procesor");
 		}
 	}
 
@@ -71,6 +94,8 @@ public class ServerPacketProcessor implements PacketProcessor {
 		for (UserMsg u : g.getMembers()) { //ajouter à la string le userid de chaque membre.
 			msg += u.getId() + ", ";
 		}
+		//remove last ","
+		msg = msg.substring(0, msg.length() - 2);
 
 		byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8); //msg à envoyer, converti en bytes
 		int length2 = msg.getBytes().length; //longueur du msg à envoyer
@@ -224,6 +249,24 @@ for (UserMsg u : g.getMembers()) {
 			UserMsg user = server.getUser(userId);
 			if (user != null) {
 				group.removeMember(user);
+
+				// Envoyer une notification aux autres membres du groupe
+				String msg = "L'utilisateur " + userId + " a été retiré du groupe " + groupId;
+				byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8); //msg à envoyer, converti en bytes
+				int length = msg.getBytes().length; //longueur du msg à envoyer
+
+				ByteBuffer buffer = ByteBuffer.allocate(4 + length);
+				buffer.putInt(length);
+				buffer.put(msgBytes);
+
+			// nv tableau qui concatène la longueur du msg et le msg lui-même
+				byte[] dataArray = buffer.array();
+
+				for (UserMsg u : group.getMembers()) {
+					Packet reponse = new Packet(0, u.getId(), dataArray);
+					u.process(reponse);
+				}
+
 			} else {
 				LOG.warning("Attempt to remove non-existent user " + userId + " from group " + groupId);
 			}
