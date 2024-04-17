@@ -9,5 +9,7 @@
  * You should have received a copy of the GNU General Public License along with Foobar. If not, see <https://www.gnu.org/licenses/>.
  */
 
-package fr.uga.miashs.dciss.chatservice.gui;public class OptionsGUI {
+package fr.uga.miashs.dciss.chatservice.gui;
+
+public class OptionsGUI {
 }
