@@ -62,7 +62,21 @@ public class ServerPacketProcessor implements PacketProcessor {
 			//TRACE : print every userid and their username
 			LOG.info(server.getUsers());
 		}
+		else if (type == 6) { //cas login
+			//call method :
+			login(p.srcId, buf);
+		}
+		else if (type == 7) { //update password
+			int userId = p.srcId; //id du user
+			int length = buf.getInt(); //on recupere la longueur du password
+			byte[] passwordBytes = new byte[length]; //on recupere le password
+			buf.get(passwordBytes);
+			String password = new String(passwordBytes, StandardCharsets.UTF_8);
 
+			//on met à jour le password côté serveur (setPassword() de la classe UserMsg)
+			server.getUser(userId).setPassword(password);
+			LOG.info("userId " + userId + " a mis à jour son password en " + password);
+		}
 			//dans le cas où le type n'est pas déterminé
 		else {
 				LOG.warning("Server message of type=" + type + " not handled by procesor");
@@ -272,6 +286,50 @@ for (UserMsg u : g.getMembers()) {
 			}
 		} else {
 			LOG.warning("Group " + groupId + " not found");
+		}
+
+
+	}
+
+	private void login(int userId, ByteBuffer buf) {
+		int usernameLength = buf.getInt();
+		byte[] usernameBytes = new byte[usernameLength];
+		buf.get(usernameBytes);
+		String username = new String(usernameBytes, StandardCharsets.UTF_8);
+
+		int passwordLength = buf.getInt();
+		byte[] passwordBytes = new byte[passwordLength];
+		buf.get(passwordBytes);
+		String password = new String(passwordBytes, StandardCharsets.UTF_8);
+
+		// Authenticate the user
+		boolean authenticated = server.authenticateUser(userId, password);
+		if (authenticated) {
+			LOG.info("User " + username + " authenticated successfully");
+
+			// Send a message to the user to confirm the authentication
+			String msg = "Authentication successful";
+			byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8);
+			int length = msg.getBytes().length;
+			ByteBuffer buffer = ByteBuffer.allocate(4 + length);
+			buffer.putInt(length);
+			buffer.put(msgBytes);
+			byte[] data = buffer.array();
+			Packet reponse = new Packet(0, userId, data);
+			server.getUser(userId).process(reponse);
+		} else {
+			LOG.info("Authentication failed for user " + username);
+
+			// Send a message to the user to inform that the authentication failed
+			String msg = "Authentication failed";
+			byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8);
+			int length = msg.getBytes().length;
+			ByteBuffer buffer = ByteBuffer.allocate(4 + length);
+			buffer.putInt(length);
+			buffer.put(msgBytes);
+			byte[] data = buffer.array();
+			Packet reponse = new Packet(0, userId, data);
+			server.getUser(userId).process(reponse);
 		}
 	}
 }

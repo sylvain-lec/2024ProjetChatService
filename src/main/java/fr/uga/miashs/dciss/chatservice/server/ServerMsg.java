@@ -34,6 +34,8 @@ public class ServerMsg {
 	// maps pour associer les id aux users et groupes
 	private Map<Integer, UserMsg> users;
 	private Map<Integer, GroupMsg> groups;
+
+
 	
 	
 	
@@ -82,6 +84,19 @@ public class ServerMsg {
 		return users.get(userId);
 	}
 
+	/**
+	 * Get the username of a user by its id
+	 * @param userId
+	 * @return username
+	 */
+	public String getUsernameByUserId(int userId) {
+		UserMsg user = users.get(userId);
+		if (user != null) {
+			return user.getUsername();
+		}
+		return null; // or throw an exception
+	}
+
 	//get users names and id
 	public String getUsers() {
 		String res = "";
@@ -93,6 +108,11 @@ public class ServerMsg {
 
 	public GroupMsg getGroup(int groupId) {
 		return groups.get(groupId);
+	}
+
+	public boolean authenticateUser(int userId, String password) {
+		UserMsg user = users.get(userId);
+		return user != null && user.checkPassword(password);
 	}
 
 	
@@ -141,7 +161,7 @@ public class ServerMsg {
 					dos.writeInt(userId);
 					dos.flush();
 					//j'ajoute un username par défaut, du type user3. le constructeur de UserMsg prend mtn une string en paramètre.
-					users.put(userId, new UserMsg(userId, this, "user"+userId));
+					users.put(userId, new UserMsg(userId, this, "user"+userId, "password"));
 				}
 				// si l'identifiant existe ou est nouveau alors 
 				// deux "taches"/boucles  sont lancées en parralèle
