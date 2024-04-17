@@ -156,26 +156,30 @@ public class ClientMsg {
 			dos.write(password.getBytes(StandardCharsets.UTF_8));
 			dos.flush();
 			sendPacket(0, bos.toByteArray());
-			System.out.println("packet for login sent to server. sendLoginRequest() in ClientMsg");
+			System.out.println("login packet sent from sendLoginRequest() in ClientMsg");
 
 
-			// READ THE SERVER'S RESPONSE to return a boolean
-			// i'm not sure it's the right place to do it.
+			// READ THE SERVER'S RESPONSE to return a boolean. i'm not sure it's the right place to do it.
 			int length = dis.readInt();
 			byte[] data = new byte[length];
 			dis.readFully(data);
+/* TRACE */	System.out.println("TRACE : data received from server : " + new String(data));
+			if (data.length > 0) {
+				// The first byte of the data is the response type
+				int responseType = data[0]; //PROBLEM : LENGTH 0
 
-			// The first byte of the data is the response type
-			byte responseType = data[0];
-
-			if (responseType == 0) { // Authentication failed
-				System.out.println("Authentication failed. Please try again.");
-				return false;
-			} else if (responseType == 1) { // Authentication succeeded
-				System.out.println("Successfully authenticated.");
-				return true;
-			} else {
-				System.out.println("Received unexpected response type.");
+				if (responseType == 0) { // Authentication failed
+					System.out.println("Successfully authenticated.");
+					return false;
+				} else if (responseType == 1) { // Authentication succeeded
+					System.out.println("Authentication failed. Please try again.");
+					return true;
+				} else {
+					System.out.println("Received unexpected response type.");
+					return false;
+				}
+			} else { //empty response
+/* TRACE */		System.out.println("ClientMsg received an empty reponse from the server");
 				return false;
 			}
 		} catch (IOException e) {
@@ -285,8 +289,12 @@ public class ClientMsg {
 		c.startSession();
 		Scanner sc = new Scanner(System.in);
 
-		System.out.println("Voulez vous vous connecter? Y/N");
-		String rep = sc.nextLine();
+		// AUTHENTIFICATION
+		String rep = "a" ;
+		while (!rep.equals("Y") && !rep.equals("N")) {
+			System.out.println("Voulez vous vous connecter? Y/N");
+			rep = sc.nextLine();
+		}
 		if (rep.equals("Y")) {
 			System.out.println("Entrez votre nom d'utilisateur : ");
 			String username = sc.nextLine();
@@ -294,26 +302,19 @@ public class ClientMsg {
 			System.out.println("Entrez votre mot de passe : ");
 			String password = sc.nextLine();
 			c.sendLoginRequest(username, password);
+			System.out.println("Vous êtes " + c.getUsername());
 
 		}
 		else {
-
 			System.out.println("\nVous êtes : " + c.getUsername());
 		}
 
-		// Thread.sleep(5000);
-
-/*
-		System.out.println("Entrez votre nom d'utilisateur : ");
-		String username = sc.nextLine();
-		c.setUsername(username) ;
-		System.out.println("Vous êtes " + c.getUsername());
-*/
 		String lu = null;
 		while (!"\\quit".equals(lu)) {
 			try {
 				System.out.println("\n" + c.getUsername()+ ", que souhaitez-vous faire? \n0 : envoyer un message\n1 : créer un groupe\n2 : supprimer un groupe\n3 : ajouter un membre à un groupe\n4 : supprimer un membre d'un groupe\n5 : changer de nom\n7 : changer de mot de passe\n");
 				int code = Integer.parseInt(sc.nextLine());
+
 				if (code == 0) { //envoyer un msg
 					System.out.println("\nA qui voulez vous écrire ? ");
 					int dest = Integer.parseInt(sc.nextLine());
@@ -321,24 +322,31 @@ public class ClientMsg {
 					lu = sc.nextLine();
 					c.sendPacket(dest, lu.getBytes());
 				}
+
 				else if (code == 1) { //creer un groupe
 					ByteArrayOutputStream bos = new ByteArrayOutputStream();
 					DataOutputStream dos = new DataOutputStream(bos);
 
 					// byte 1 : create group on server
 					dos.writeByte(1);
-					System.out.println("\nhow many members?");
-					int nb = Integer.parseInt(sc.nextLine()); // nb members
-					dos.writeInt(nb);
 
+					//empty int list
+					List<Integer> members = new ArrayList<>();
+
+					int member = 1;
 					// list of members
-					for (int i = 0 ; i < nb ; i++) {
+					while (member != 0) {
 						System.out.println("add a member : (type 0 to exit)");
-						dos.writeInt(Integer.parseInt(sc.nextLine()));
+						member = Integer.parseInt(sc.nextLine());
+						members.add(member);
 					}
-
+					dos.writeInt(members.size()); //nb de membres envoyé dans le paquet
+					//on envoie dans le paquet chaque userId, le sender compris
+					dos.writeInt(c.getIdentifier()); //on envoie le sender
+					for (int i = 0 ; i < members.size() ; i++) {
+						dos.writeInt(members.get(i)); //on envoie tous les autres membres
+					}
 					dos.flush();
-
 					c.sendPacket(0, bos.toByteArray());
 				}
 
@@ -456,5 +464,7 @@ public class ClientMsg {
 		c.closeSession();
 
 	}
+
+
 
 }

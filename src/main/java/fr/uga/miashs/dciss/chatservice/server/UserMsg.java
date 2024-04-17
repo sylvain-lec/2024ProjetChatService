@@ -61,6 +61,7 @@ public class UserMsg implements PacketProcessor{
 	public String getPassword() { return password; }
 
 	public boolean checkPassword(String password) { return this.password.equals(password); }
+
 	
 	public boolean removeGroup(GroupMsg g) {
 		if (groups.remove(g)) {
@@ -106,10 +107,16 @@ public class UserMsg implements PacketProcessor{
 		s=null;
 		LOG.info(userId + " deconnected");
 	}
-	
-	public boolean isConnected() {
+
+public boolean isConnected() {
 		return s!=null;
 	}
+
+//	//AUTHENTIFICATION. A ETE MODIFIE
+//	public boolean isConnected() {
+//		return s != null && s.isConnected() && !s.isClosed();
+//	}
+
 	
 	// boucle d'envoie
 	public void receiveLoop() {

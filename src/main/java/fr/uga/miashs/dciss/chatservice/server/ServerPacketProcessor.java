@@ -305,23 +305,25 @@ for (UserMsg u : g.getMembers()) {
 		// Authenticate the user
 		boolean authenticated = server.authenticateUser(userId, password);
 		if (authenticated) {
-			LOG.info("User " + username + " authenticated successfully");
+			LOG.info("from ServerPacketProcessor, login() : User " + username + " authenticated successfully");
 
 			// Send a message to the user to confirm the authentication
-			String msg = "Authentication successful";
+			String msg = "from ServerPacketProcessor, login() : Authentication successful";
 			byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8);
 			int length = msg.getBytes().length;
-			ByteBuffer buffer = ByteBuffer.allocate(4 + length);
+			int confirmationCode = 0;
+			ByteBuffer buffer = ByteBuffer.allocate(4 + 4 + length);
+			buffer.putInt(confirmationCode);
 			buffer.putInt(length);
 			buffer.put(msgBytes);
 			byte[] data = buffer.array();
 			Packet reponse = new Packet(0, userId, data);
-			server.getUser(userId).process(reponse);
+			server.getUser(userId).process(reponse); //getUser() in ServerMsg
 		} else {
-			LOG.info("Authentication failed for user " + username);
+			LOG.info("from ServerPacketProcessor, login() : Authentication failed for user " + username);
 
 			// Send a message to the user to inform that the authentication failed
-			String msg = "Authentication failed";
+			String msg = "from ServerPacketProcessor, login() : Authentication failed";
 			byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8);
 			int length = msg.getBytes().length;
 			ByteBuffer buffer = ByteBuffer.allocate(4 + length);
