@@ -11,6 +11,7 @@
 
 package fr.uga.miashs.dciss.chatservice.client;
 
+import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -19,6 +20,8 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import fr.uga.miashs.dciss.chatservice.common.Packet;
+
+import javax.imageio.ImageIO;
 
 /**
  * Manages the connection to a ServerMsg. Method startSession() is used to
@@ -52,7 +55,7 @@ public class ClientMsg {
 	 * @param address The server address or hostname
 	 * @param port    The port number
 	 */
-	public ClientMsg(int id, String address, int port, String username, String password) {
+	public ClientMsg(int id, String address, int port, String username) {
 		if (id < 0)
 			throw new IllegalArgumentException("id must not be less than 0");
 		if (port <= 0)
@@ -74,7 +77,7 @@ public class ClientMsg {
 	 * @param port    The port number
 	 */
 	public ClientMsg(String address, int port) {
-		this(0, address, port, "defaultUsername", "password");
+		this(0, address, port, "defaultUsername");
 	}
 
 	/**
@@ -309,7 +312,7 @@ public class ClientMsg {
 		String lu = null;
 		while (!"\\quit".equals(lu)) {
 			try {
-				System.out.println("\n" + c.getUsername()+ ", que souhaitez-vous faire? \n0 : envoyer un message\n1 : créer un groupe\n2 : supprimer un groupe\n3 : ajouter un membre à un groupe\n4 : supprimer un membre d'un groupe\n5 : changer de nom\n6 : changer de mot de passe\n");
+				System.out.println("\n" + c.getUsername()+ ", que souhaitez-vous faire? \n0 : envoyer un message\n1 : créer un groupe\n2 : supprimer un groupe\n3 : ajouter un membre à un groupe\n4 : supprimer un membre d'un groupe\n5 : changer de nom\n7 : changer de mot de passe\n");
 				int code = Integer.parseInt(sc.nextLine());
 				if (code == 0) { //envoyer un msg
 					System.out.println("\nA qui voulez vous écrire ? ");
@@ -392,7 +395,18 @@ public class ClientMsg {
 					System.out.println("Vous êtes " + c.getUsername());
 				}
 
-				else if (code == 6) { //change password
+				else if (code == 6) { // Send an image
+					ByteArrayOutputStream bos = new ByteArrayOutputStream();
+					DataOutputStream dos = new DataOutputStream(bos);
+
+					dos.writeByte(6);
+					System.out.println("Adresse de l'image - format jpg:");
+					String imagePath = sc.nextLine();
+					BufferedImage image = ImageIO.read(new File(imagePath));
+					Packet packet = new Packet(c.getIdentifier(), 0, bos.toByteArray(), image);
+					c.sendPacket(0, packet.toByteArray());
+				}
+				else if (code == 7) { //change password
 					System.out.println("\nSaisissez votre ancien mot de passe : ");
 					String oldPassword = sc.nextLine();
 					//get password associated with the username, without using the server
