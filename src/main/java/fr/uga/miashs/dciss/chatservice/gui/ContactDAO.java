@@ -31,10 +31,10 @@ public class ContactDAO {
             ResultSet resultSet = statement.executeQuery();
 
             while (resultSet.next()) {
-                int id = resultSet.getInt("id");
-                String nickname = resultSet.getString("nickname");
+                int contactId = resultSet.getInt("contactId");
+                String name = resultSet.getString("name");
                 // Créez un objet Contact et ajoutez-le à la liste
-                contacts.add(new ContactListGUI.Contact(id, nickname, null)); // L'icône est null pour l'instant
+                contacts.add(new ContactListGUI.Contact(contactId, name));
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -47,8 +47,8 @@ public class ContactDAO {
         try (Connection connection = DriverManager.getConnection(URL)) {
             PreparedStatement statement = connection.prepareStatement(
                     "CREATE TABLE IF NOT EXISTS contacts (" +
-                            "id INTEGER PRIMARY KEY," +
-                            "nickname TEXT" +
+                            "contactId INTEGER PRIMARY KEY," +
+                            "name TEXT" +
                             ")"
             );
             statement.execute();
@@ -60,7 +60,7 @@ public class ContactDAO {
     // Méthode pour insérer un nouveau contact dans la base de données
     public boolean insertContact(ContactListGUI.Contact contact) {
         try (Connection connection = DriverManager.getConnection(URL)) {
-            PreparedStatement statement = connection.prepareStatement("INSERT INTO contacts (id, nickname) VALUES (?, ?)");
+            PreparedStatement statement = connection.prepareStatement("INSERT INTO contacts (contactId, name) VALUES (?, ?)");
             statement.setInt(1, contact.getContactId());
             statement.setString(2, contact.getName());
             int rowsInserted = statement.executeUpdate();

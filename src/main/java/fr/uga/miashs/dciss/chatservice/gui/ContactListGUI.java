@@ -17,12 +17,12 @@ public class ContactListGUI {
     public static class Contact {
         private int contactId;
         private String name;
-        private Icon icon;
 
-        public Contact(int contactId, String name, Icon icon) {
+
+        public Contact(int contactId, String name) {
             this.contactId = contactId;
             this.name = name;
-            this.icon = icon;
+
         }
 
         // getters...
@@ -34,9 +34,6 @@ public class ContactListGUI {
             return name;
         }
 
-        public Icon getIcon() {
-            return icon;
-        }
     }
 
     public ContactListGUI() {
@@ -92,7 +89,7 @@ public class ContactListGUI {
             if (value instanceof Contact) {
                 Contact contact = (Contact) value;
                 setText(contact.getName());
-                setIcon(contact.getIcon());
+
             }
             return this;
         }
