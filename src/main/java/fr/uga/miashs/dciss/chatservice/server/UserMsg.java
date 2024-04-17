@@ -25,6 +25,7 @@ public class UserMsg implements PacketProcessor{
 	
 	private int userId;
 	private String username;
+	private String password;
 	private Set<GroupMsg> groups;
 	
 	private ServerMsg server;
@@ -39,7 +40,7 @@ public class UserMsg implements PacketProcessor{
 	 * @param server
 	 * @param username : default username given by the server (in ServerMsg) is "user"+clientId
 	 */
-	public UserMsg(int clientId, ServerMsg server, String username) {
+	public UserMsg(int clientId, ServerMsg server, String username, String password) {
 		if (clientId<1) throw new IllegalArgumentException("id must not be less than 0");
 		this.server=server;
 		this.userId=clientId;
@@ -47,6 +48,7 @@ public class UserMsg implements PacketProcessor{
 		sendQueue = new LinkedBlockingQueue<>();
 		groups = Collections.synchronizedSet(new HashSet<>());
 		this.username = username;
+		this.password = password;
 	}
 	
 	public int getId() {
@@ -55,6 +57,10 @@ public class UserMsg implements PacketProcessor{
 	public String getUsername() { return username; }
 
 	public void setUsername(String username) { this.username = username; }
+
+	public String getPassword() { return password; }
+
+	public boolean checkPassword(String password) { return this.password.equals(password); }
 	
 	public boolean removeGroup(GroupMsg g) {
 		if (groups.remove(g)) {
@@ -163,5 +169,8 @@ public class UserMsg implements PacketProcessor{
 	public void process(Packet p) {
 		sendQueue.offer(p);
 	}
-	
+
+	public void setPassword(String password) {
+		this.password = password;
+	}
 }

@@ -34,6 +34,8 @@ public class ServerMsg {
 	// maps pour associer les id aux users et groupes
 	private Map<Integer, UserMsg> users;
 	private Map<Integer, GroupMsg> groups;
+
+
 	
 	
 	
@@ -108,6 +110,11 @@ public class ServerMsg {
 		return groups.get(groupId);
 	}
 
+	public boolean authenticateUser(int userId, String password) {
+		UserMsg user = users.get(userId);
+		return user != null && user.checkPassword(password);
+	}
+
 	
 	// Methode utilisée pour savoir quoi faire d'un paquet
 	// reçu par le serveur
@@ -154,7 +161,7 @@ public class ServerMsg {
 					dos.writeInt(userId);
 					dos.flush();
 					//j'ajoute un username par défaut, du type user3. le constructeur de UserMsg prend mtn une string en paramètre.
-					users.put(userId, new UserMsg(userId, this, "user"+userId));
+					users.put(userId, new UserMsg(userId, this, "user"+userId, "password"));
 				}
 				// si l'identifiant existe ou est nouveau alors 
 				// deux "taches"/boucles  sont lancées en parralèle

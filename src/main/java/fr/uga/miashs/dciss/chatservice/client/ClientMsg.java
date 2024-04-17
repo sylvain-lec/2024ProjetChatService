@@ -39,6 +39,7 @@ public class ClientMsg {
 
 	private int identifier;
 	private String username;
+	private String password;
 
 	private List<MessageListener> mListeners;
 	private List<ConnectionListener> cListeners;
@@ -51,7 +52,7 @@ public class ClientMsg {
 	 * @param address The server address or hostname
 	 * @param port    The port number
 	 */
-	public ClientMsg(int id, String address, int port, String username) {
+	public ClientMsg(int id, String address, int port, String username, String password) {
 		if (id < 0)
 			throw new IllegalArgumentException("id must not be less than 0");
 		if (port <= 0)
@@ -62,6 +63,7 @@ public class ClientMsg {
 		mListeners = new ArrayList<>();
 		cListeners = new ArrayList<>();
 		this.username = username;
+		this.password = password;
 	}
 
 	/**
@@ -72,7 +74,7 @@ public class ClientMsg {
 	 * @param port    The port number
 	 */
 	public ClientMsg(String address, int port) {
-		this(0, address, port, "defaultUsername");
+		this(0, address, port, "defaultUsername", "password");
 	}
 
 	/**
@@ -126,6 +128,60 @@ public class ClientMsg {
 		}
 	}
 
+	public void setPassword(String password) {
+		this.password = password;
+	}
+
+	public String getPassword() {
+		return password;
+	}
+
+	public boolean sendLoginRequest(String username, String password) {
+		this.username = username;
+		this.password = password;
+
+		//send packet to the server; the server will update the username.
+		//1byte for the type (6), 4 bytes for the username length,
+		//then the username, 4bytes for the password length, then the password
+		ByteArrayOutputStream bos = new ByteArrayOutputStream();
+		DataOutputStream dos = new DataOutputStream(bos);
+		try {
+			dos.writeByte(6);
+			dos.writeInt(username.length());
+			dos.write(username.getBytes(StandardCharsets.UTF_8));
+			dos.writeInt(password.length());
+			dos.write(password.getBytes(StandardCharsets.UTF_8));
+			dos.flush();
+			sendPacket(0, bos.toByteArray());
+			System.out.println("packet for login sent to server. sendLoginRequest() in ClientMsg");
+
+
+			// READ THE SERVER'S RESPONSE to return a boolean
+			// i'm not sure it's the right place to do it.
+			int length = dis.readInt();
+			byte[] data = new byte[length];
+			dis.readFully(data);
+
+			// The first byte of the data is the response type
+			byte responseType = data[0];
+
+			if (responseType == 0) { // Authentication failed
+				System.out.println("Authentication failed. Please try again.");
+				return false;
+			} else if (responseType == 1) { // Authentication succeeded
+				System.out.println("Successfully authenticated.");
+				return true;
+			} else {
+				System.out.println("Received unexpected response type.");
+				return false;
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return false;
+
+	}
+
 
 
 	/**
@@ -149,6 +205,7 @@ public class ClientMsg {
 				// start the receive loop
 				new Thread(() -> receiveLoop()).start();
 				notifyConnectionListeners(true);
+
 			} catch (IOException e) {
 				e.printStackTrace();
 				// error, close session
@@ -209,21 +266,40 @@ public class ClientMsg {
 		notifyConnectionListeners(false);
 	}
 
+
 	public static void main(String[] args) throws UnknownHostException, IOException, InterruptedException {
 		ClientMsg c = new ClientMsg("localhost", 1666);
 
 		// add a dummy listener that print the content of message as a string
-		c.addMessageListener(p -> System.out.println(p.srcId + " says to " + p.destId + ": " + new String(p.data)));
+		c.addMessageListener(p -> {
+			String username = c.getUsername();
+			System.out.println(username + " says to " + p.destId + ": " + new String(p.data));
+		});
 
 		// add a connection listener that exit application when connection closed
 		c.addConnectionListener(active ->  {if (!active) System.exit(0);});
 
 		c.startSession();
-		System.out.println("Vous êtes : " + c.getUsername());
+		Scanner sc = new Scanner(System.in);
+
+		System.out.println("Voulez vous vous connecter? Y/N");
+		String rep = sc.nextLine();
+		if (rep.equals("Y")) {
+			System.out.println("Entrez votre nom d'utilisateur : ");
+			String username = sc.nextLine();
+			c.setUsername(username);
+			System.out.println("Entrez votre mot de passe : ");
+			String password = sc.nextLine();
+			c.sendLoginRequest(username, password);
+
+		}
+		else {
+
+			System.out.println("\nVous êtes : " + c.getUsername());
+		}
 
 		// Thread.sleep(5000);
 
-		Scanner sc = new Scanner(System.in);
 /*
 		System.out.println("Entrez votre nom d'utilisateur : ");
 		String username = sc.nextLine();
@@ -233,7 +309,7 @@ public class ClientMsg {
 		String lu = null;
 		while (!"\\quit".equals(lu)) {
 			try {
-				System.out.println("\n" + c.getUsername()+ ", que souhaitez-vous faire? \n0 : envoyer un message\n1 : créer un groupe\n2 : supprimer un groupe\n3 : ajouter un membre à un groupe\n4 : supprimer un membre d'un groupe\n5 : changer de nom\n");
+				System.out.println("\n" + c.getUsername()+ ", que souhaitez-vous faire? \n0 : envoyer un message\n1 : créer un groupe\n2 : supprimer un groupe\n3 : ajouter un membre à un groupe\n4 : supprimer un membre d'un groupe\n5 : changer de nom\n6 : changer de mot de passe\n");
 				int code = Integer.parseInt(sc.nextLine());
 				if (code == 0) { //envoyer un msg
 					System.out.println("\nA qui voulez vous écrire ? ");
@@ -314,6 +390,36 @@ public class ClientMsg {
 					String newUsername = sc.nextLine();
 					c.setUsername(newUsername);
 					System.out.println("Vous êtes " + c.getUsername());
+				}
+
+				else if (code == 6) { //change password
+					System.out.println("\nSaisissez votre ancien mot de passe : ");
+					String oldPassword = sc.nextLine();
+					//get password associated with the username, without using the server
+					boolean isAuthenticated = c.getPassword().equals(oldPassword);
+					//if the password is correct, the server will ask for the new password
+					//AUTHENTIFICATION
+					if (isAuthenticated) {
+						System.out.println("Mot de passe correct. Nouveau mot de passe : ");
+						String newPassword = sc.nextLine();
+						//send packet to the server; the server will update the password.
+						//1byte for the type (7), 4bytes (an int) for the length of the password, then the password
+						ByteArrayOutputStream bos = new ByteArrayOutputStream();
+						DataOutputStream dos = new DataOutputStream(bos);
+						try {
+							dos.writeByte(7);
+							dos.writeInt(newPassword.length());
+							dos.write(newPassword.getBytes(StandardCharsets.UTF_8));
+							dos.flush();
+							c.sendPacket(0, bos.toByteArray());
+							System.out.println("packet for password update sent to server. depuis ClientMsg");
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+					} else {
+						System.out.println("Mot de passe non reconnu. Veuillez réessayer.");
+						continue;
+					}
 				}
 
 
