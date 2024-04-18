@@ -1,5 +1,7 @@
 package fr.uga.miashs.dciss.chatservice.gui;
 import fr.uga.miashs.dciss.chatservice.client.ClientMsg;
+import fr.uga.miashs.dciss.chatservice.client.ConnectionListener;
+import fr.uga.miashs.dciss.chatservice.client.MessageListener;
 
 import javax.swing.*;
 import java.awt.*;
@@ -40,12 +42,11 @@ public class Chat {
 
 
     public Chat() {
-// Attempt to connect to the server
+        // connect to the server
         clientMsg = new ClientMsg("localhost", 1666);
-        //clientMsg.setUsername(username);
-        //clientMsg.setPassword(password);
-
-        //clientMsg.startSession();
+        clientMsg.addMessageListener((MessageListener) this);
+        clientMsg.addConnectionListener((ConnectionListener) this);
+        clientMsg.startSession();
 
         initializeUI();
         customizeUIComponents();
@@ -80,11 +81,11 @@ public class Chat {
         createGroupButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String groupName = JOptionPane.showInputDialog(frame, "Entrez nom de groupe:");
-                if (groupName != null && !groupName.trim().isEmpty()) {
-                    //clientMsg.creationGroupe(groupName);
-                    System.out.println("Le groupe \"" + groupName + "\" a été créé avec succès.");
-                    JOptionPane.showMessageDialog(frame, "Le groupe \"" + groupName + "\" a été créé avec succès.", "Succès", JOptionPane.INFORMATION_MESSAGE);
+                String groupIdString = JOptionPane.showInputDialog(frame, "Entrez l'ID du groupe:");
+                if (groupIdString != null && !groupIdString.trim().isEmpty()) {
+                    int groupId = Integer.parseInt(groupIdString);
+                    //clientMsg.creationGroupe(groupId);
+                    JOptionPane.showMessageDialog(frame, "Le groupe \"" + groupIdString + "\" a été créé avec succès.", "Succès", JOptionPane.INFORMATION_MESSAGE);
 
                 }
             }
@@ -93,25 +94,30 @@ public class Chat {
         deleteGroupButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String groupName = JOptionPane.showInputDialog(frame, "Entrez le nom du groupe à supprimer:");
-                if (groupName != null && !groupName.trim().isEmpty()) {
-                    // Send a packet to the server to delete the group
-                    // Wait for the server's response
-                    // If the server successfully deleted the group
-                    // Remove the group name from the contactListModel
+                String groupIdString = JOptionPane.showInputDialog(frame, "Entrez l'ID du groupe:");
+                if (groupIdString != null && !groupIdString.trim().isEmpty()) {
+                    int groupId = Integer.parseInt(groupIdString);
+                    clientMsg.supprimerGroupe(groupId);
+                    JOptionPane.showMessageDialog(frame, "Le groupe \"" + groupIdString + "\" a été supprimé avec succès.", "Succès", JOptionPane.INFORMATION_MESSAGE);
+
                 }
             }
         });
         addMemberButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String groupName = JOptionPane.showInputDialog(frame, "Entrez le nom du groupe:");
-                String memberName = JOptionPane.showInputDialog(frame, "Entrez le nom du membre:");
-                if (groupName != null && !groupName.trim().isEmpty() && memberName != null && !memberName.trim().isEmpty()) {
-                    // Send a packet to the server to add a member to the group
-                    // Wait for the server's response
-                    // If the server successfully added the member to the group
-                    // Update the contactListModel
+                String groupIdString = JOptionPane.showInputDialog(frame, "Enter the group ID:");
+                String userIdString = JOptionPane.showInputDialog(frame, "Enter the user ID:");
+                if (groupIdString != null && !groupIdString.trim().isEmpty() && userIdString != null && !userIdString.trim().isEmpty()) {
+                    try {
+                        int groupId = Integer.parseInt(groupIdString);
+                        int userId = Integer.parseInt(userIdString);
+                        clientMsg.addMember(groupId, userId);
+                        JOptionPane.showMessageDialog(frame, "Le groupe \"" + groupId + "\" a ajouté" +userId+"avec succès.", "Succès", JOptionPane.INFORMATION_MESSAGE);
+
+                    } catch (NumberFormatException ex) {
+                        JOptionPane.showMessageDialog(frame, "Invalid input. Please enter a valid integer for group ID and user ID.");
+                    }
                 }
             }
         });
@@ -119,13 +125,16 @@ public class Chat {
         removeMemberButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String groupName = JOptionPane.showInputDialog(frame, "Entrez le nom du groupe:");
-                String memberName = JOptionPane.showInputDialog(frame, "Entrez le nom du membre:");
-                if (groupName != null && !groupName.trim().isEmpty() && memberName != null && !memberName.trim().isEmpty()) {
-                    // Send a packet to the server to remove a member from the group
-                    // Wait for the server's response
-                    // If the server successfully removed the member from the group
-                    // Update the contactListModel
+                String groupIdString = JOptionPane.showInputDialog(frame, "Entrez l'ID du groupe:");
+                String userIdString = JOptionPane.showInputDialog(frame, "Entrez l'ID du membre:");
+                if (groupIdString != null && !groupIdString.trim().isEmpty() && userIdString != null && !userIdString.trim().isEmpty()) {
+                    try {
+                        int groupId = Integer.parseInt(groupIdString);
+                        int userId = Integer.parseInt(userIdString);
+                        clientMsg.removeMember(groupId, userId);
+                    } catch (NumberFormatException ex) {
+                        JOptionPane.showMessageDialog(frame, "Invalid input. Please enter a valid integer for group ID and user ID.");
+                    }
                 }
             }
         });
@@ -134,10 +143,7 @@ public class Chat {
             public void actionPerformed(ActionEvent e) {
                 String newUsername = JOptionPane.showInputDialog(frame, "Entrez le nouveau nom d'utilisateur:");
                 if (newUsername != null && !newUsername.trim().isEmpty()) {
-                    // Send a packet to the server to change the username
-                    // Wait for the server's response
-                    // If the server successfully changed the username
-                    // Update the UI with the new username
+                    clientMsg.setUsername(newUsername);
                 }
             }
         });
@@ -146,16 +152,14 @@ public class Chat {
             public void actionPerformed(ActionEvent e) {
                 String newPassword = JOptionPane.showInputDialog(frame, "Entrez le nouveau mot de passe:");
                 if (newPassword != null && !newPassword.trim().isEmpty()) {
-                    // Send a packet to the server to change the password
-                    // Wait for the server's response
-                    // If the server successfully changed the password
-                    // Update the UI with the new password
+                    clientMsg.updatePassword();
+
                 }
             }
         });
 
 
-        // Create a panel with a BoxLayout for the buttons
+        // Panel with a BoxLayout for the buttons
         JPanel buttonPanel = new JPanel();
         buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.PAGE_AXIS));
 
@@ -175,7 +179,6 @@ public class Chat {
         buttonPanel.add(changePasswordButton);
         buttonPanel.add(Box.createRigidArea(new Dimension(0, 5)));
 
-        // Ensure buttons do not stretch
         buttonPanel.add(Box.createVerticalGlue());
 
         // Set alignment for all components within the panel
@@ -264,16 +267,50 @@ public class Chat {
                 // Handle the selected option
                 switch (selectedOption) {
                     case "Votre Profile":
-                        // Handle "View Profile" action
+                        showUserProfile();
                         break;
                     case "Log In":
-                        // Handle "Log In" action
+                        try {
+                            showLoginDialog();
+                        } catch (UnknownHostException ex) {
+                            throw new RuntimeException(ex);
+                        }
                         break;
                     case "Log Out":
-                        // Handle "Log Out" action
+                        performLogout();
                         break;
                 }
             }
+
+            private void showUserProfile() {
+                String userInfo = clientMsg.getClientInfo(); // Implement getClientInfo to return user details
+                JOptionPane.showMessageDialog(frame, userInfo, "Profile Information", JOptionPane.INFORMATION_MESSAGE);
+
+            }
+            private void showLoginDialog() throws UnknownHostException {
+                JTextField usernameField = new JTextField(5);
+                JPasswordField passwordField = new JPasswordField(5);
+
+                JPanel myPanel = new JPanel();
+                myPanel.add(new JLabel("Username:"));
+                myPanel.add(usernameField);
+                myPanel.add(Box.createHorizontalStrut(15)); // a spacer
+                myPanel.add(new JLabel("Password:"));
+                myPanel.add(passwordField);
+
+                int result = JOptionPane.showConfirmDialog(null, myPanel,
+                        "Votre Username et Password", JOptionPane.OK_CANCEL_OPTION);
+                if (result == JOptionPane.OK_OPTION) {
+                    clientMsg.startSession(new String(passwordField.getPassword()));
+                }
+            }
+
+
+            private void performLogout() {
+                clientMsg.endSession();
+                JOptionPane.showMessageDialog(frame, "Vous avez Logout.", "Logout Succèss", JOptionPane.INFORMATION_MESSAGE);
+            }
+
         });
         rightTopPanel.add(profileMenu);
         topPanel.add(leftTopPanel, BorderLayout.WEST);

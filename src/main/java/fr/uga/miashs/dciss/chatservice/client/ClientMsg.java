@@ -477,7 +477,7 @@ public class ClientMsg {
 	 * packet format (if correct password) : 1byte for the type (7), 4bytes (an int) for the length of the password, then the password
 	 * @return true if the password has been updated, false otherwise
 	 */
-	private boolean updatePassword() {
+	public boolean updatePassword() {
 		Scanner sc = new Scanner(System.in);
 
 		System.out.println("\nSaisissez votre ancien mot de passe : ");
@@ -517,7 +517,7 @@ public class ClientMsg {
 	 * @param groupId : the id of the group
 	 * @param userId : the id of the user to remove
 	 */
-	private void removeMember(int groupId, int userId) {
+	public void removeMember(int groupId, int userId) {
 		try {
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		DataOutputStream dos = new DataOutputStream(bos);
@@ -538,7 +538,7 @@ public class ClientMsg {
 	 * @param groupId : the id of the group
 	 * @param userId : the id of the user to add
 	 */
-	private void addMember(int groupId, int userId) {
+	public void addMember(int groupId, int userId) {
 		try {
 			ByteArrayOutputStream bos = new ByteArrayOutputStream();
 			DataOutputStream dos = new DataOutputStream(bos);
@@ -556,7 +556,7 @@ public class ClientMsg {
 	/**
 	 * Delete a group on the server
 	 */
-	private void supprimerGroupe(int idGroup) {
+	public void supprimerGroupe(int idGroup) {
 		try {
 			ByteArrayOutputStream bos = new ByteArrayOutputStream();
 			DataOutputStream dos = new DataOutputStream(bos);
@@ -577,7 +577,7 @@ public class ClientMsg {
 	 * packet format : 1byte for the type (1), 4bytes for the number of members, then the list of members
 	 * @param members : list of members to add to the group
 	 */
-	private void creationGroupe(List<Integer> members) {
+	public void creationGroupe(List<Integer> members) {
 		Scanner sc = new Scanner(System.in);
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		DataOutputStream dos = new DataOutputStream(bos);
@@ -614,4 +614,22 @@ public class ClientMsg {
 	}
 
 
+	public String getClientInfo() {
+		return "ClientMsg{" +
+				"serverAddress='" + serverAddress + '\'' +
+				", serverPort=" + serverPort +
+				", identifier=" + identifier +
+				", username='" + username + '\'' +
+				", password='" + password + '\'' +
+				'}';
+	}
+
+	public void endSession() {
+		try {
+			if (s != null)
+				s.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 }
