@@ -102,6 +102,27 @@ public class ServerPacketProcessor implements PacketProcessor {
 			LOG.info("userId " + userId + " created an account. Password : " + password);
 		}
 
+		else if (type == 9) { //CASE INFORMATION RETRIEVAL
+			LOG.info("packet recieved for info retrieval");
+			int userId = p.srcId; //id du user
+			String username = server.getUser(userId).getUsername(); //on récupère le username
+
+			//on envoie le username
+			byte[] usernameBytes = username.getBytes(StandardCharsets.UTF_8); //msg à envoyer, converti en bytes
+			int length = username.getBytes().length; //longueur du msg à envoyer
+
+			// Create a byte buffer with 4 extra bytes for the length
+			ByteBuffer buffer = ByteBuffer.allocate(1 + 4 + length);
+			buffer.put((byte) 9);
+			buffer.putInt(length);
+			buffer.put(usernameBytes);
+			// nv tableau qui concatène la longueur du msg et le msg lui-même
+			byte[] data = buffer.array();
+			Packet reponse = new Packet(0, userId, data); //on forme le packet
+			server.getUser(userId).process(reponse); //on l'envoie
+		}
+
+
 
 
 			//dans le cas où le type n'est pas déterminé
@@ -313,7 +334,7 @@ for (UserMsg u : g.getMembers()) {
 	}
 
 	private void login(int userId, ByteBuffer buf) {
-
+		LOG.info("on est dans login()");
 		int usernameLength = buf.getInt();
 		byte[] usernameBytes = new byte[usernameLength];
 		buf.get(usernameBytes);

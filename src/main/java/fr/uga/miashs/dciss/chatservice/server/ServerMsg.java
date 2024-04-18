@@ -162,6 +162,7 @@ public class ServerMsg {
 
 				// lit l'identifiant du client
 				int userId = dis.readInt();
+				String password = dis.readUTF();
 				//si 0 alors il faut créer un nouvel utilisateur et
 				// envoyer l'identifiant au client
 				if (userId == 0) {
@@ -169,7 +170,7 @@ public class ServerMsg {
 					dos.writeInt(userId);
 					dos.flush();
 					//j'ajoute un username par défaut, du type user3. le constructeur de UserMsg prend mtn une string en paramètre.
-					users.put(userId, new UserMsg(userId, this, "user"+userId, "password"));
+					users.put(userId, new UserMsg(userId, this, "user"+userId, password));
 				}
 				// si l'identifiant existe ou est nouveau alors 
 				// deux "taches"/boucles  sont lancées en parralèle
@@ -177,7 +178,7 @@ public class ServerMsg {
 				// une pour envoyer des messages au client
 				// les deux boucles sont gérées au niveau de la classe UserMsg
 				UserMsg x = users.get(userId);
-				if (x!= null && x.open(s, "user"+userId)) {
+				if (x!= null && x.open(s, x.getUsername()) && x.getPassword().equals(password)) {
 					LOG.info(userId + " connected");
 					// lancement boucle de reception
 					executor.submit(() -> x.receiveLoop());
