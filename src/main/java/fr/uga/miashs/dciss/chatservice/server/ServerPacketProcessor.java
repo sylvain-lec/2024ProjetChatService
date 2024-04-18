@@ -178,7 +178,9 @@ public class ServerPacketProcessor implements PacketProcessor {
 		int length2 = msg.getBytes().length; //longueur du msg à envoyer
 
 // bytebuffer
-		ByteBuffer buffer2 = ByteBuffer.allocate(4 + length2);
+		ByteBuffer buffer2 = ByteBuffer.allocate(1+ 4 + 4 + length2);
+		buffer2.put((byte) 1);
+		buffer2.putInt(g.getId()); //on envoie l'id du groupe (pour que les membres puissent l'identifier
 		buffer2.putInt(length2);
 		buffer2.put(msgBytes);
 // nv tableau qui concatène la longueur du msg et le msg lui-même

@@ -239,8 +239,12 @@ public class ClientMsg {
 						byte responseType = buffer.get();
 
 					if (responseType == 1) { // Si le type de réponse est 1, cela signifie la création de groupe.
-						int groupId = buffer.get();
-						System.out.println("Le groupe numéro " + groupId + " a été créé.");
+						int groupId = buffer.getInt();
+						int lengthMsg = buffer.getInt();
+						byte[] msgBytes = new byte[lengthMsg];
+						buffer.get(msgBytes);
+						String msg = new String(msgBytes, StandardCharsets.UTF_8);
+						System.out.println(msg);
 
 					}
 					else if (responseType == 9) {
@@ -376,7 +380,15 @@ public class ClientMsg {
 				}
 
 				else if (code == 1) { //creer un groupe
-					c.creationGroupe();
+					List<Integer> members = new ArrayList<>();
+					int member = 1;
+					// list of members
+					while (member != 0) {
+						System.out.println("add a member : (type 0 to exit)");
+						member = Integer.parseInt(sc.nextLine());
+						members.add(member);
+					}
+					c.creationGroupe(members);
 				}
 
 				else if (code == 2) { //supprimer un groupe
@@ -386,11 +398,23 @@ public class ClientMsg {
 				}
 
 				else if (code == 3) { //ajouter un member à un groupe
-					c.addMember();
+					System.out.println("\nDans quel groupe voulez-vous ajouter un membre?");
+					int idGroup = Integer.parseInt(sc.nextLine());
+
+					System.out.println("\nQuel utilisateur voulez-vous ajouter ?");
+					int userId = Integer.parseInt(sc.nextLine());
+
+					c.addMember(idGroup, userId);
 				}
 
-				else if (code == 4) { //supprimer un membre d'un groupe
-					c.removeMember();
+				else if (code == 4) { //supprimer un membre d'un
+					System.out.println("\nDans quel groupe voulez-vous supprimer un membre?");
+					int idGroup = Integer.parseInt(sc.nextLine()); // idGroup
+
+					System.out.println("\nQuel utilisateur voulez-vous supprimer ?");
+					int userId = Integer.parseInt(sc.nextLine());
+
+					c.removeMember(idGroup, userId);
 				}
 
 				else if (code == 5) { //changer de nom
@@ -402,9 +426,6 @@ public class ClientMsg {
 
 				else if (code == 7) { //change password
 					boolean reussi = c.updatePassword();
-					if (!reussi) {
-						continue;
-					}
 
 				} else if (code == 8) { // ajouter contact à un utilisateur
 					ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -443,6 +464,7 @@ public class ClientMsg {
 
 	/**
 	 * Update the password of the user
+	 * packet format (if correct password) : 1byte for the type (7), 4bytes (an int) for the length of the password, then the password
 	 * @return true if the password has been updated, false otherwise
 	 */
 	private boolean updatePassword() {
@@ -450,8 +472,6 @@ public class ClientMsg {
 
 		System.out.println("\nSaisissez votre ancien mot de passe : ");
 		String oldPassword = sc.nextLine();
-		System.out.println("old password : " + oldPassword);
-		System.out.println("this password : " + this.getPassword());
 		//get password associated with the username, without using the server
 		boolean isAuthenticated = this.getPassword().equals(oldPassword);
 		//if the password is correct, the server will ask for the new password
@@ -469,6 +489,7 @@ public class ClientMsg {
 				dos.write(newPassword.getBytes(StandardCharsets.UTF_8));
 				dos.flush();
 				this.sendPacket(0, bos.toByteArray());
+				System.out.println("Votre mot de passe a été modifié avec succès");
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -482,21 +503,17 @@ public class ClientMsg {
 
 	/**
 	 * Remove a member from a group on the server
+	 * packet format : 4byte for the type (4), 4bytes for the groupId, 4bytes for the userId
+	 * @param groupId : the id of the group
+	 * @param userId : the id of the user to remove
 	 */
-	private void removeMember() {
+	private void removeMember(int groupId, int userId) {
 		try {
-		Scanner sc = new Scanner(System.in);
-
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		DataOutputStream dos = new DataOutputStream(bos);
 
 		dos.writeByte(4); //premier byte à 4 pour supprimer un membre
-		System.out.println("\nDans quel groupe voulez-vous supprimer un membre?");
-		int idGroup = Integer.parseInt(sc.nextLine()); // idGroup
-		dos.writeInt(idGroup);
-
-		System.out.println("\nQuel utilisateur voulez-vous supprimer ?");
-		int userId = Integer.parseInt(sc.nextLine());
+		dos.writeInt(groupId);
 		dos.writeInt(userId);
 		dos.flush();
 		this.sendPacket(0, bos.toByteArray());
@@ -507,22 +524,17 @@ public class ClientMsg {
 
 	/**
 	 * Add a member to a group on the server
-
+	 * packet format : 3byte for the type (3), 4bytes for the groupId, 4bytes for the userId
+	 * @param groupId : the id of the group
+	 * @param userId : the id of the user to add
 	 */
-	private void addMember() {
+	private void addMember(int groupId, int userId) {
 		try {
-			Scanner sc = new Scanner(System.in);
 			ByteArrayOutputStream bos = new ByteArrayOutputStream();
 			DataOutputStream dos = new DataOutputStream(bos);
 
-			// byte à 3 : ajouter un membre au serveur
 			dos.writeByte(3);
-			System.out.println("\nDans quel groupe voulez-vous ajouter un membre?");
-			int idGroup = Integer.parseInt(sc.nextLine()); // idGroup
-			dos.writeInt(idGroup);
-
-			System.out.println("\nQuel utilisateur voulez-vous ajouter ?");
-			int userId = Integer.parseInt(sc.nextLine());
+			dos.writeInt(groupId);
 			dos.writeInt(userId);
 			dos.flush();
 			this.sendPacket(0, bos.toByteArray());
@@ -537,6 +549,7 @@ public class ClientMsg {
 	private void supprimerGroupe(int idGroup) {
 		try {
 			ByteArrayOutputStream bos = new ByteArrayOutputStream();
+			DataOutputStream dos = new DataOutputStream(bos);
 
 			// byte 2 : delete group on server
 			dos.writeByte(2);
@@ -551,34 +564,23 @@ public class ClientMsg {
 
 	/**
 	 * Create a group on the server
+	 * packet format : 1byte for the type (1), 4bytes for the number of members, then the list of members
+	 * @param members : list of members to add to the group
 	 */
-	private void creationGroupe() {
+	private void creationGroupe(List<Integer> members) {
 		Scanner sc = new Scanner(System.in);
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		DataOutputStream dos = new DataOutputStream(bos);
-
-		// byte 1 : create group on server
 		try {
 			dos.writeByte(1);
-
-		//empty int list
-		List<Integer> members = new ArrayList<>();
-
-		int member = 1;
-		// list of members
-		while (member != 0) {
-			System.out.println("add a member : (type 0 to exit)");
-			member = Integer.parseInt(sc.nextLine());
-			members.add(member);
-		}
-		dos.writeInt(members.size()); //nb de membres envoyé dans le paquet
-		//on envoie dans le paquet chaque userId, le sender compris
-		dos.writeInt(this.getIdentifier()); //on envoie le sender
-		for (int i = 0 ; i < members.size() ; i++) {
-			dos.writeInt(members.get(i)); //on envoie tous les autres membres
-		}
-		dos.flush();
-		this.sendPacket(0, bos.toByteArray());
+			dos.writeInt(members.size()); //nb de membres dans le groupe
+			//on envoie dans le paquet chaque userId, le sender compris
+			dos.writeInt(this.getIdentifier()); //on envoie le sender
+			for (int i = 0 ; i < members.size() ; i++) {
+				dos.writeInt(members.get(i)); //on envoie tous les autres membres
+			}
+			dos.flush();
+			this.sendPacket(0, bos.toByteArray());
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}

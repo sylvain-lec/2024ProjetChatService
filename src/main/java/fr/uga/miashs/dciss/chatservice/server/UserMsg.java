@@ -113,12 +113,6 @@ public class UserMsg implements PacketProcessor{
 public boolean isConnected() {
 		return s!=null;
 	}
-
-//	//AUTHENTIFICATION. A ETE MODIFIE
-//	public boolean isConnected() {
-//		return s != null && s.isConnected() && !s.isClosed();
-//	}
-
 	
 	// boucle d'envoie
 	public void receiveLoop() {
