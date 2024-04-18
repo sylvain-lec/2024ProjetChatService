@@ -87,7 +87,7 @@ public class ServerPacketProcessor implements PacketProcessor {
 			byte[] contactNameBytes = new byte[contactNameLength];
 			buf.get(contactNameBytes); // lire le nom du contact
 			String contactName = new String(contactNameBytes, StandardCharsets.UTF_8);
-			addContact(userId, contactId, contactName);
+			addContact(userId, buf);
 			LOG.info("packet to add contact received by the server");
 
 		}
@@ -97,16 +97,45 @@ public class ServerPacketProcessor implements PacketProcessor {
 		}
 	}
 
-	private void addContact(int userId, int contactId, String contactName) {
+	public void addContact(int userId, ByteBuffer buf) {
+		// Extract contact ID and contact name from the buffer
+		int contactId = buf.getInt();
+		int contactNameLength = buf.getInt();
+		byte[] contactNameBytes = new byte[contactNameLength];
+		buf.get(contactNameBytes);
+		String contactName = new String(contactNameBytes, StandardCharsets.UTF_8);
+
+		// Get the user and attempt to add the contact
 		UserMsg user = server.getUser(userId);
 		if (user != null) {
-			// Ajoute le contact à l'utilisateur
 			user.addContact(contactId, contactName);
-			LOG.info("Contact added successfully for user with ID: " + userId + ", contact ID: " + contactId + ", contact Name: " + contactName);
+			LOG.info("Contact " + contactName + " added for user with ID " + userId);
+
+			// Send a confirmation message to the user
+			String confirmationMessage = "Contact " + contactName + " added successfully";
+			byte[] confirmationMessageBytes = confirmationMessage.getBytes(StandardCharsets.UTF_8);
+			int confirmationMessageLength = confirmationMessageBytes.length;
+			ByteBuffer confirmationBuffer = ByteBuffer.allocate(4 + confirmationMessageLength);
+			confirmationBuffer.putInt(confirmationMessageLength);
+			confirmationBuffer.put(confirmationMessageBytes);
+			byte[] confirmationData = confirmationBuffer.array();
+			Packet confirmationPacket = new Packet(0, userId, confirmationData);
+			server.getUser(userId).process(confirmationPacket);
 		} else {
 			LOG.warning("User with ID " + userId + " not found. Contact not added.");
+
+			// Optionally, send an error message back to the client
+			String errorMessage = "User not found, contact not added.";
+			byte[] errorMessageBytes = errorMessage.getBytes(StandardCharsets.UTF_8);
+			ByteBuffer errorBuffer = ByteBuffer.allocate(4 + errorMessageBytes.length);
+			errorBuffer.putInt(errorMessageBytes.length);
+			errorBuffer.put(errorMessageBytes);
+			byte[] errorData = errorBuffer.array();
+			Packet errorPacket = new Packet(0, userId, errorData);
+			server.getUser(userId).process(errorPacket);
 		}
 	}
+
 
 
 
@@ -116,46 +145,32 @@ public class ServerPacketProcessor implements PacketProcessor {
 		for (int i = 0; i < nb; i++) {
 			g.addMember(server.getUser(data.getInt()));
 		}
-		//Packet qui informe le owner que le groupe a été créé
-		String msgOwner = "Vous avez créé le groupe " + g.getId() ;
-		byte[] msgOwnerBytes = msgOwner.getBytes(StandardCharsets.UTF_8);//msg à envoyer, converti en bytes
-		int length = msgOwner.getBytes().length;
-		// bytebuffer
-		ByteBuffer buffer = ByteBuffer.allocate(4 + length);
-		buffer.putInt(length);
-		buffer.put(msgOwnerBytes);
-		// nv tableau qui concatène la longueur du msg et le msg lui-même
-		byte[] dataMsg = buffer.array();
 
-		Packet reponse = new Packet(0, ownerId, dataMsg);
-		server.getUser(ownerId).process(reponse);
+		// Envoyer un message de confirmation au propriétaire du groupe
+		String confirmationMessage = "Le groupe " + g.getId() + " a été créé avec succès";
+		byte[] confirmationMessageBytes = confirmationMessage.getBytes(StandardCharsets.UTF_8);
+		int confirmationMessageLength = confirmationMessageBytes.length;
+		ByteBuffer confirmationBuffer = ByteBuffer.allocate(4 + confirmationMessageLength);
+		confirmationBuffer.putInt(confirmationMessageLength);
+		confirmationBuffer.put(confirmationMessageBytes);
+		byte[] confirmationData = confirmationBuffer.array();
+		Packet confirmationPacket = new Packet(0, ownerId, confirmationData);
+		server.getUser(ownerId).process(confirmationPacket);
 
-		// packet qui informe les autres membres du groupe de la création du groupe
-		String msg = "Le groupe " + g.getId() + " a été créé par le user " + ownerId + ". Les membres sont : ";
-		for (UserMsg u : g.getMembers()) { //ajouter à la string le userid de chaque membre.
-			msg += u.getId() + ", ";
-		}
-		//remove last ","
-		msg = msg.substring(0, msg.length() - 2);
-
-		byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8); //msg à envoyer, converti en bytes
-		int length2 = msg.getBytes().length; //longueur du msg à envoyer
-
-// bytebuffer
-		ByteBuffer buffer2 = ByteBuffer.allocate(4 + length2);
-		buffer2.putInt(length2);
-		buffer2.put(msgBytes);
-// nv tableau qui concatène la longueur du msg et le msg lui-même
-		byte[] dataMsg2 = buffer2.array();
-
-		//send to everyone, except to the owner
-for (UserMsg u : g.getMembers()) {
+		// Envoyer un message aux autres membres du groupe
+		String groupCreatedMessage = "Le groupe " + g.getId() + " a été créé par l'utilisateur " + ownerId;
+		for (UserMsg u : g.getMembers()) {
 			if (u.getId() != ownerId) {
-				Packet reponse2 = new Packet(0, u.getId(), dataMsg2);
-				u.process(reponse2);
+				byte[] groupCreatedMessageBytes = groupCreatedMessage.getBytes(StandardCharsets.UTF_8);
+				int groupCreatedMessageLength = groupCreatedMessageBytes.length;
+				ByteBuffer groupCreatedBuffer = ByteBuffer.allocate(4 + groupCreatedMessageLength);
+				groupCreatedBuffer.putInt(groupCreatedMessageLength);
+				groupCreatedBuffer.put(groupCreatedMessageBytes);
+				byte[] groupCreatedData = groupCreatedBuffer.array();
+				Packet groupCreatedPacket = new Packet(0, u.getId(), groupCreatedData);
+				u.process(groupCreatedPacket);
 			}
 		}
-
 	}
 
 	/**

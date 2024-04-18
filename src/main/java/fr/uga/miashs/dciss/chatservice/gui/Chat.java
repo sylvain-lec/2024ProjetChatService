@@ -1,7 +1,13 @@
 package fr.uga.miashs.dciss.chatservice.gui;
+import fr.uga.miashs.dciss.chatservice.client.ClientMsg;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.net.UnknownHostException;
 import javax.swing.ImageIcon;
 import javax.swing.text.*;
 
@@ -24,8 +30,25 @@ public class Chat {
     private JComboBox<String> profileMenu;
     private JButton addContactButton;
     private JButton createGroupButton;
+    private JButton deleteGroupButton;
+    private JButton addMemberButton;
+    private JButton removeMemberButton;
+    private JButton changeUsernameButton;
+    private JButton changePasswordButton;
+
+    private ClientMsg clientMsg;
+
 
     public Chat() {
+        try {
+            // Assume Server Address and Port are correctly provided
+            clientMsg = new ClientMsg("localhost", 1666);
+            clientMsg.startSession();
+        } catch (IOException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Failed to connect to the server.", "Connection Error", JOptionPane.ERROR_MESSAGE);
+            // Consider disabling functionality or closing the application if the connection is essential
+        }
         initializeUI();
         customizeUIComponents();
         initializeButtons();
@@ -34,13 +57,30 @@ public class Chat {
     private void initializeButtons() {
         addContactButton = new JButton("Ajouter Contact");
         createGroupButton = new JButton("Créer Groupe");
+        deleteGroupButton = new JButton("Supprimer Groupe");
+         addMemberButton = new JButton("Ajouter Membre");
+         removeMemberButton = new JButton("Supprimer Membre");
+         changeUsernameButton = new JButton("Changer Nom");
+         changePasswordButton = new JButton("Changer Password");
 
         addContactButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String contactName = JOptionPane.showInputDialog(frame, "Entrez nom de contact:");
-                if (contactName != null && !contactName.trim().isEmpty()) {
-                    contactListModel.addElement(contactName);
+                String contactIdString = JOptionPane.showInputDialog(frame, "Enter contact's ID:");
+                String contactName = JOptionPane.showInputDialog(frame, "Enter contact's name:");
+                if (contactIdString != null && !contactIdString.trim().isEmpty() && contactName != null && !contactName.trim().isEmpty()) {
+                    int contactId = Integer.parseInt(contactIdString);
+                    try {
+                        clientMsg.addContact(contactId, contactName);
+                        System.out.println("Le contact \"" + contactName + "\" a été ajouté avec succès.");
+                        JOptionPane.showMessageDialog(frame, "Le contact \"" + contactName + "\" a été ajouté avec succès.", "Succès", JOptionPane.INFORMATION_MESSAGE);
+
+
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                        JOptionPane.showMessageDialog(frame, "Erreur lors de la création du contact.", "Erreur", JOptionPane.ERROR_MESSAGE);
+
+                    }
                 }
             }
         });
@@ -50,21 +90,167 @@ public class Chat {
             public void actionPerformed(ActionEvent e) {
                 String groupName = JOptionPane.showInputDialog(frame, "Entrez nom de groupe:");
                 if (groupName != null && !groupName.trim().isEmpty()) {
-                    System.out.println("Groupe a été créé: " + groupName);
+                    try {
+                        createGroup(groupName);
+                        System.out.println("Le groupe \"" + groupName + "\" a été créé avec succès.");
+                        JOptionPane.showMessageDialog(frame, "Le groupe \"" + groupName + "\" a été créé avec succès.", "Succès", JOptionPane.INFORMATION_MESSAGE);
+
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                        JOptionPane.showMessageDialog(frame, "Erreur lors de la création du groupe.", "Erreur", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            }
+
+        });
+        deleteGroupButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String groupName = JOptionPane.showInputDialog(frame, "Entrez le nom du groupe à supprimer:");
+                if (groupName != null && !groupName.trim().isEmpty()) {
+                    // Send a packet to the server to delete the group
+                    // Wait for the server's response
+                    // If the server successfully deleted the group
+                    // Remove the group name from the contactListModel
+                }
+            }
+        });
+        addMemberButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String groupName = JOptionPane.showInputDialog(frame, "Entrez le nom du groupe:");
+                String memberName = JOptionPane.showInputDialog(frame, "Entrez le nom du membre:");
+                if (groupName != null && !groupName.trim().isEmpty() && memberName != null && !memberName.trim().isEmpty()) {
+                    // Send a packet to the server to add a member to the group
+                    // Wait for the server's response
+                    // If the server successfully added the member to the group
+                    // Update the contactListModel
                 }
             }
         });
 
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        buttonPanel.add(addContactButton);
-        buttonPanel.add(createGroupButton);
+        removeMemberButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String groupName = JOptionPane.showInputDialog(frame, "Entrez le nom du groupe:");
+                String memberName = JOptionPane.showInputDialog(frame, "Entrez le nom du membre:");
+                if (groupName != null && !groupName.trim().isEmpty() && memberName != null && !memberName.trim().isEmpty()) {
+                    // Send a packet to the server to remove a member from the group
+                    // Wait for the server's response
+                    // If the server successfully removed the member from the group
+                    // Update the contactListModel
+                }
+            }
+        });
+        changeUsernameButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String newUsername = JOptionPane.showInputDialog(frame, "Entrez le nouveau nom d'utilisateur:");
+                if (newUsername != null && !newUsername.trim().isEmpty()) {
+                    // Send a packet to the server to change the username
+                    // Wait for the server's response
+                    // If the server successfully changed the username
+                    // Update the UI with the new username
+                }
+            }
+        });
+        changePasswordButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String newPassword = JOptionPane.showInputDialog(frame, "Entrez le nouveau mot de passe:");
+                if (newPassword != null && !newPassword.trim().isEmpty()) {
+                    // Send a packet to the server to change the password
+                    // Wait for the server's response
+                    // If the server successfully changed the password
+                    // Update the UI with the new password
+                }
+            }
+        });
 
-        // Adding the button panel below the contact list
-        leftPanel.add(buttonPanel, BorderLayout.SOUTH);
+
+        // Create a panel with a BoxLayout for the buttons
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.PAGE_AXIS));
+
+        // Add buttons to the panel
+        buttonPanel.add(addContactButton);
+        buttonPanel.add(Box.createRigidArea(new Dimension(0, 5))); // This adds space between buttons
+        buttonPanel.add(createGroupButton);
+        buttonPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+        buttonPanel.add(deleteGroupButton);
+        buttonPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+        buttonPanel.add(addMemberButton);
+        buttonPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+        buttonPanel.add(removeMemberButton);
+        buttonPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+        buttonPanel.add(changeUsernameButton);
+        buttonPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+        buttonPanel.add(changePasswordButton);
+        buttonPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+
+        // Ensure buttons do not stretch
+        buttonPanel.add(Box.createVerticalGlue());
+
+        // Set alignment for all components within the panel
+        for (Component comp : buttonPanel.getComponents()) {
+            ((JComponent) comp).setAlignmentX(Component.LEFT_ALIGNMENT);
+        }
+
+        leftPanel.add(buttonPanel, BorderLayout.NORTH);
 
         frame.validate();
-        frame.repaint();
+        frame.repaint();    }
+    private void createGroup(String groupName) throws IOException {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        DataOutputStream dos = new DataOutputStream(bos);
+        dos.writeUTF(groupName);
+        clientMsg.sendPacket(1, bos.toByteArray());
+        dos.close();
+        bos.close();
+        contactListModel.addElement(groupName);
     }
+    /*private void addContactToUser() {
+        String contactIdString = JOptionPane.showInputDialog(frame, "Enter contact's ID:");
+        String contactName = JOptionPane.showInputDialog(frame, "Enter contact's name:");
+        if (contactIdString != null && !contactIdString.trim().isEmpty() && contactName != null && !contactName.trim().isEmpty()) {
+            int contactId = Integer.parseInt(contactIdString);
+            try {
+                clientMsg.addContact(contactId, contactName);
+                JOptionPane.showMessageDialog(frame, "Contact added successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+            } catch (IOException ex) {
+                ex.printStackTrace();
+                JOptionPane.showMessageDialog(frame, "Error while adding contact.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private void changeUserUsername() {
+        String newUsername = JOptionPane.showInputDialog(frame, "Enter your new username:");
+        if (newUsername != null && !newUsername.trim().isEmpty()) {
+            try {
+                clientMsg.changeUsername(newUsername);
+                JOptionPane.showMessageDialog(frame, "Username changed successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+            } catch (IOException ex) {
+                ex.printStackTrace();
+                JOptionPane.showMessageDialog(frame, "Error while changing username.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private void changeUserPassword() {
+        String newPassword = JOptionPane.showInputDialog(frame, "Enter your new password:");
+        if (newPassword != null && !newPassword.trim().isEmpty()) {
+            try {
+                clientMsg.changePassword(clientMsg.getPassword(), newPassword);
+                JOptionPane.showMessageDialog(frame, "Password changed successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+            } catch (IOException ex) {
+                ex.printStackTrace();
+                JOptionPane.showMessageDialog(frame, "Error while changing password.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }*/
+
+
 
     private void initializeUI() {
         frame = new JFrame("Chat");
@@ -74,8 +260,8 @@ public class Chat {
         // Create the top panel
         topPanel = new JPanel(new BorderLayout());
         leftTopPanel = new JPanel();
-        searchField = new PlaceholderTextField(20);
-        searchField.setFocusable(false);
+        searchField = new PlaceholderTextField(15);
+        //searchField.setFocusable(false);
         searchField.setPlaceholder("Rechercher...");
         leftTopPanel.add(searchField);
 
@@ -117,8 +303,6 @@ public class Chat {
         contactListModel = new DefaultListModel<>();
         contactListModel.addElement("This Name");
         contactListModel.addElement("That Name");
-        contactListModel.addElement("Another Name");
-        contactListModel.addElement("Another Another Name");
 
         contactList = new JList<>(contactListModel);
         contactList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -188,7 +372,19 @@ public class Chat {
         if (!message.isEmpty()) {
             chatArea.append("Vous: " + message + "\n");  // Display the message in the chat area
             messageInput.setText("");  // Clear the text input field
-            // Here, send the message to the server in a real application
+            this.clientMsg = new ClientMsg("localhost", 1666);
+            try {
+                clientMsg.startSession();
+            } catch (UnknownHostException e) {
+                e.printStackTrace();
+                return;
+            }
+            int dest = 0;
+            clientMsg.sendPacket(dest, message.getBytes());
+            initializeUI();
+            customizeUIComponents();
+            initializeButtons();
+
         }
     }
 

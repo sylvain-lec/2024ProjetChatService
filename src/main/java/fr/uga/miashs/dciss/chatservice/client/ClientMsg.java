@@ -142,6 +142,20 @@ public class ClientMsg {
 	public String getPassword() {
 		return password;
 	}
+	public void addContact(int contactId, String contactName) throws IOException {
+		ByteArrayOutputStream bos = new ByteArrayOutputStream();
+		DataOutputStream dos = new DataOutputStream(bos);
+
+		dos.writeByte(8); // Assuming '8' is the protocol number for adding a contact
+		dos.writeInt(contactId);
+		dos.writeInt(contactName.length());
+		dos.write(contactName.getBytes(StandardCharsets.UTF_8));
+
+		sendPacket(0, bos.toByteArray()); // Sending to server; assuming '0' might be the server ID
+
+		dos.close();
+		bos.close();
+	}
 
 	public boolean sendLoginRequest(String username, String password) {
 		//DON'T UPDATE USERNAME AND PASSWORD HERE, BC AUTHENTICATION COULD FAIL. instead see receiveLoop()
@@ -365,6 +379,7 @@ public class ClientMsg {
 //		else {
 //			System.out.println("\nVous êtes : " + c.getUsername());
 //		}
+
 
 		String lu = null;
 		while (!"\\quit".equals(lu)) {
