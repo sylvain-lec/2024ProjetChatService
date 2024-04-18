@@ -116,6 +116,11 @@ public class ClientMsg {
 		return identifier;
 	}
 	public String getUsername() { return username; }
+
+	/**
+	 * sets username client-side, and sends a packet to the server to update the username server-side.
+	 * @param username
+	 */
 	public void setUsername(String username) {
 		this.username = username;
 
@@ -134,6 +139,10 @@ public class ClientMsg {
 		}
 	}
 
+	/**
+	 * Sets password client side, and sends a packet to the server to update the password server-side.
+	 * @param password
+	 */
 	public void setPassword(String password) {
 		this.password = password;
 
@@ -230,8 +239,9 @@ public class ClientMsg {
 						byte responseType = buffer.get();
 
 					if (responseType == 1) { // Si le type de réponse est 1, cela signifie la création de groupe.
-						int groupId = buffer.getInt();
+						int groupId = buffer.get();
 						System.out.println("Le groupe numéro " + groupId + " a été créé.");
+
 					}
 					else if (responseType == 9) {
 						System.out.println("packet received in receiveloop()");
@@ -323,6 +333,7 @@ public class ClientMsg {
 				System.out.println("Enter your username: ");
 				String username = sc.nextLine();
 				c.username = username;
+				c.password = password;
 
 				System.out.println("you are now registered as " + c.getUsername() + " with id " + c.getIdentifier());
 				c.isAuthenticated = true ;
@@ -437,6 +448,8 @@ public class ClientMsg {
 
 		System.out.println("\nSaisissez votre ancien mot de passe : ");
 		String oldPassword = sc.nextLine();
+		System.out.println("old password : " + oldPassword);
+		System.out.println("this password : " + this.getPassword());
 		//get password associated with the username, without using the server
 		boolean isAuthenticated = this.getPassword().equals(oldPassword);
 		//if the password is correct, the server will ask for the new password
@@ -457,6 +470,7 @@ public class ClientMsg {
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
+			this.password = newPassword;
 			return true;
 		} else {
 			System.out.println("Mot de passe non reconnu. Veuillez réessayer.");
@@ -466,7 +480,6 @@ public class ClientMsg {
 
 	/**
 	 * Remove a member from a group on the server
-
 	 */
 	private void removeMember() {
 		try {

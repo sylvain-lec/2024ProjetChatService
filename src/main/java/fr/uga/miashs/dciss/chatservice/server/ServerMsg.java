@@ -163,6 +163,7 @@ public class ServerMsg {
 				// lit l'identifiant du client
 				int userId = dis.readInt();
 				String password = dis.readUTF();
+				LOG.info("Connection request from " + userId + " with password " + password);
 				//si 0 alors il faut créer un nouvel utilisateur et
 				// envoyer l'identifiant au client
 				if (userId == 0) {
