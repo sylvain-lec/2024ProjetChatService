@@ -49,7 +49,7 @@ public class ServerPacketProcessor implements PacketProcessor {
 			removeMember(p.srcId, buf);
 		}
 		else if (type == 5) { //cas mettre a jour le username
-			int userId = p.srcId; //id du user
+			int userId = p.srcId;
 			int length = buf.getInt();
 			byte[] usernameBytes = new byte[length];
 			buf.get(usernameBytes);
@@ -75,7 +75,7 @@ public class ServerPacketProcessor implements PacketProcessor {
 
 			//on met à jour le password côté serveur (setPassword() de la classe UserMsg)
 			server.getUser(userId).setPassword(password);
-			LOG.info("userId " + userId + " a mis à jour son password en " + password);
+			LOG.info("userId " + userId + " updated their password to : " + password);
 		}
 			//dans le cas où le type n'est pas déterminé
 		else {
@@ -171,17 +171,13 @@ for (UserMsg u : g.getMembers()) {
 				//informer le sender par un packet qu'il n'a pas les droits pour supprimer les groupes
 				String msg = "Vous n'avez pas les droits pour supprimer le groupe " + groupId;
 				byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8);
-
-				//longueur du msg à envoyer
-				int length = msg.getBytes().length;
+				int length = msg.getBytes().length; //longueur du msg à envoyer
 
 				// Create a byte buffer with 4 extra bytes for the length
 				ByteBuffer buffer = ByteBuffer.allocate(4 + length);
-
 				// Put the length and the text bytes into the buffer
 				buffer.putInt(length);
 				buffer.put(msgBytes);
-
 				// nv tableau qui concatène la longueur du msg et le msg lui-même
 				byte[] data = buffer.array();
 
@@ -228,7 +224,7 @@ for (UserMsg u : g.getMembers()) {
 				group.addMember(user);
 				// Envoyer une notification ou une confirmation si nécessaire
 				//msg à envoyer, converti en bytes
-				String msg = "L'utilisateur " + userId + " a été ajouté au groupe " + groupId;
+				String msg = "User " + userId + " has been added to group " + groupId;
 				byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8);
 
 				//longueur du msg à envoyer
@@ -265,7 +261,7 @@ for (UserMsg u : g.getMembers()) {
 				group.removeMember(user);
 
 				// Envoyer une notification aux autres membres du groupe
-				String msg = "L'utilisateur " + userId + " a été retiré du groupe " + groupId;
+				String msg = "User " + userId + " has been removed from group " + groupId;
 				byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8); //msg à envoyer, converti en bytes
 				int length = msg.getBytes().length; //longueur du msg à envoyer
 
@@ -308,7 +304,7 @@ for (UserMsg u : g.getMembers()) {
 			LOG.info("from ServerPacketProcessor, login() : User " + username + " authenticated successfully");
 
 			// Send a message to the user to confirm the authentication
-			String msg = "from ServerPacketProcessor, login() : Authentication successful";
+			String msg = "from ServerPacketProcessor, login() : authenticated successfully";
 			byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8);
 			int length = msg.getBytes().length;
 			int confirmationCode = 0;
@@ -320,13 +316,14 @@ for (UserMsg u : g.getMembers()) {
 			Packet reponse = new Packet(0, userId, data);
 			server.getUser(userId).process(reponse); //getUser() in ServerMsg
 		} else {
-			LOG.info("from ServerPacketProcessor, login() : Authentication failed for user " + username);
+			LOG.info("\nfrom ServerPacketProcessor, login() : Authentication failed for user " + username);
 
 			// Send a message to the user to inform that the authentication failed
-			String msg = "from ServerPacketProcessor, login() : Authentication failed";
+			String msg = "\nfrom ServerPacketProcessor, login() : Authentication failed";
 			byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8);
 			int length = msg.getBytes().length;
-			ByteBuffer buffer = ByteBuffer.allocate(4 + length);
+			ByteBuffer buffer = ByteBuffer.allocate(4 + 4 + length);
+			buffer.putInt(1);
 			buffer.putInt(length);
 			buffer.put(msgBytes);
 			byte[] data = buffer.array();

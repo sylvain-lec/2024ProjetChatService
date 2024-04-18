@@ -97,11 +97,14 @@ public class ServerMsg {
 		return null; // or throw an exception
 	}
 
-	//get users names and id
+	/**
+	 * get all users, with their id, username and password
+	 * @return
+	 */
 	public String getUsers() {
 		String res = "";
 		for (UserMsg u : users.values()) {
-			res += u.getId() + " : " + u.getUsername() + "\n";
+			res += u.getId() + ", " + u.getUsername() + ", " + u.getPassword() + "\n";
 		}
 		return res;
 	}

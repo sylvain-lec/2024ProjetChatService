@@ -55,7 +55,7 @@ public class ClientMsg {
 	 * @param address The server address or hostname
 	 * @param port    The port number
 	 */
-	public ClientMsg(int id, String address, int port, String username) {
+	public ClientMsg(int id, String address, int port, String username, String password) {
 		if (id < 0)
 			throw new IllegalArgumentException("id must not be less than 0");
 		if (port <= 0)
@@ -77,7 +77,7 @@ public class ClientMsg {
 	 * @param port    The port number
 	 */
 	public ClientMsg(String address, int port) {
-		this(0, address, port, "defaultUsername");
+		this(0, address, port, "defaultUsername", "password");
 	}
 
 	/**
@@ -170,10 +170,10 @@ public class ClientMsg {
 
 				if (responseType == 0) { // Authentication failed
 					System.out.println("Successfully authenticated.");
-					return false;
+					return true;
 				} else if (responseType == 1) { // Authentication succeeded
 					System.out.println("Authentication failed. Please try again.");
-					return true;
+					return false;
 				} else {
 					System.out.println("Received unexpected response type.");
 					return false;
