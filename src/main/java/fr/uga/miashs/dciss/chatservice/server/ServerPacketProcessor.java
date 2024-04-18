@@ -81,11 +81,15 @@ public class ServerPacketProcessor implements PacketProcessor {
 			LOG.info("userId " + userId + " updated their password to : " + password);
 
 		}else if (type == 8) { //addContact
-			LOG.info("packet to add contact received by the server");
 			int userId = p.srcId; // récuperer Id user
 			int contactId = buf.getInt(); // id contact
-			addContact(userId, contactId);
-			LOG.info("contact added successfully");
+			int contactNameLength = buf.getInt(); // longueur du nom du contact
+			byte[] contactNameBytes = new byte[contactNameLength];
+			buf.get(contactNameBytes); // lire le nom du contact
+			String contactName = new String(contactNameBytes, StandardCharsets.UTF_8);
+			addContact(userId, contactId, contactName);
+			LOG.info("packet to add contact received by the server");
+
 		}
 			//dans le cas où le type n'est pas déterminé
 		else {
@@ -93,13 +97,17 @@ public class ServerPacketProcessor implements PacketProcessor {
 		}
 	}
 
-	private void addContact(int userId, int contactId) {
+	private void addContact(int userId, int contactId, String contactName) {
 		UserMsg user = server.getUser(userId);
 		if (user != null) {
-			// Ajoutez le contact à l'utilisateur
-			user.addContact(contactId);
+			// Ajoute le contact à l'utilisateur
+			user.addContact(contactId, contactName);
+			LOG.info("Contact added successfully for user with ID: " + userId + ", contact ID: " + contactId + ", contact Name: " + contactName);
+		} else {
+			LOG.warning("User with ID " + userId + " not found. Contact not added.");
 		}
 	}
+
 
 
 	public void createGroup(int ownerId, ByteBuffer data) throws IOException {

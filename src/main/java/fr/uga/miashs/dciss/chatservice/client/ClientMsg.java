@@ -362,11 +362,9 @@ public class ClientMsg {
 		String lu = null;
 		while (!"\\quit".equals(lu)) {
 			try {
-<<<<<<< HEAD
+
 				System.out.println("\n" + c.getUsername()+ ", que souhaitez-vous faire? \n0 : envoyer un message\n1 : créer un groupe\n2 : supprimer un groupe\n3 : ajouter un membre à un groupe\n4 : supprimer un membre d'un groupe\n5 : changer de nom\n7 : changer de mot de passe\n8 : Ajouter un contact\n");
-=======
-				System.out.println("\n" + c.getUsername()+ ", que souhaitez-vous faire? \n0 : envoyer un message\n1 : créer un groupe\n2 : supprimer un groupe\n3 : ajouter un membre à un groupe\n4 : supprimer un membre d'un groupe\n5 : changer de nom\n6 : changer de mot de passe\n");
->>>>>>> c19fc8e43825ef06c582763d15ff1608f02c5e72
+
 				int code = Integer.parseInt(sc.nextLine());
 
 				if (code == 0) { //envoyer un msg
@@ -510,9 +508,14 @@ public class ClientMsg {
 					// Demander à l'utilisateur les informations sur le contact à ajouter
 					System.out.println("\nEntrez l'identifiant du contact : ");
 					int contactId = Integer.parseInt(sc.nextLine());
+					System.out.println("\nEntrez le nom du contact : ");
+					String contactName = sc.nextLine();
 					try {
 						dos.writeInt(contactId);
+						dos.writeInt(contactName.getBytes(StandardCharsets.UTF_8).length);
+						dos.write(contactName.getBytes(StandardCharsets.UTF_8));
 						dos.flush();
+
 						c.sendPacket(0, bos.toByteArray());
 						System.out.println("Packet for adding contact sent to server.");
 					} catch (IOException e) {

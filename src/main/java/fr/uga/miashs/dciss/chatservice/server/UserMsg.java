@@ -26,7 +26,7 @@ public class UserMsg implements PacketProcessor{
 	private String username;
 	private String password;
 
-	private Set<Integer> contacts;
+	private Map<String, UserMsg> contacts;
 	private Set<GroupMsg> groups;
 	
 	private ServerMsg server;
@@ -48,7 +48,7 @@ public class UserMsg implements PacketProcessor{
 		active=false;
 		sendQueue = new LinkedBlockingQueue<>();
 		groups = Collections.synchronizedSet(new HashSet<>());
-		contacts = Collections.synchronizedSet(new HashSet<>());
+		contacts = new HashMap<>();
 		this.username = username;
 		this.password = password;
 	}
@@ -184,19 +184,13 @@ public boolean isConnected() {
 	}
 
 	;
-		public void addContact(int contactId) {
-			// Vérifier si l'utilisateur existe avant d'ajouter le contact
-			if (server.getUser(contactId) != null) {
-
-				if (!contacts.contains(contactId)) {
-					contacts.add(contactId);
-					LOG.info("Contact " + contactId + " added successfully for user " + userId);
-				} else {
-					LOG.warning("Contact " + contactId + " already exists for user " + userId);
-				}
-			} else {
-				LOG.warning("Attempt to add non-existent user " + contactId + " as a contact for user " + userId);
-			}
-		}
-
+	void addContact(int contactId, String contactName) {
+		contacts.put(contactName, server.getUser(contactId));
+		LOG.info("Contact added successfully for user with ID: " + userId + ", contact ID: " + contactId + ", contact Name: " + contactName);
 	}
+
+
+}
+
+
+
