@@ -40,15 +40,13 @@ public class Chat {
 
 
     public Chat() {
-        try {
-            // Assume Server Address and Port are correctly provided
-            clientMsg = new ClientMsg("localhost", 1666);
-            clientMsg.startSession();
-        } catch (IOException e) {
-            e.printStackTrace();
-            JOptionPane.showMessageDialog(null, "Failed to connect to the server.", "Connection Error", JOptionPane.ERROR_MESSAGE);
-            // Consider disabling functionality or closing the application if the connection is essential
-        }
+// Attempt to connect to the server
+        clientMsg = new ClientMsg("localhost", 1666);
+        //clientMsg.setUsername(username);
+        //clientMsg.setPassword(password);
+
+        //clientMsg.startSession();
+
         initializeUI();
         customizeUIComponents();
         initializeButtons();
@@ -58,10 +56,10 @@ public class Chat {
         addContactButton = new JButton("Ajouter Contact");
         createGroupButton = new JButton("Créer Groupe");
         deleteGroupButton = new JButton("Supprimer Groupe");
-         addMemberButton = new JButton("Ajouter Membre");
-         removeMemberButton = new JButton("Supprimer Membre");
-         changeUsernameButton = new JButton("Changer Nom");
-         changePasswordButton = new JButton("Changer Password");
+        addMemberButton = new JButton("Ajouter Membre");
+        removeMemberButton = new JButton("Supprimer Membre");
+        changeUsernameButton = new JButton("Changer Nom");
+        changePasswordButton = new JButton("Changer Password");
 
         addContactButton.addActionListener(new ActionListener() {
             @Override
@@ -70,17 +68,11 @@ public class Chat {
                 String contactName = JOptionPane.showInputDialog(frame, "Enter contact's name:");
                 if (contactIdString != null && !contactIdString.trim().isEmpty() && contactName != null && !contactName.trim().isEmpty()) {
                     int contactId = Integer.parseInt(contactIdString);
-                    try {
-                        clientMsg.addContact(contactId, contactName);
-                        System.out.println("Le contact \"" + contactName + "\" a été ajouté avec succès.");
-                        JOptionPane.showMessageDialog(frame, "Le contact \"" + contactName + "\" a été ajouté avec succès.", "Succès", JOptionPane.INFORMATION_MESSAGE);
+                    //clientMsg.addContact(contactId, contactName);
+                    System.out.println("Le contact \"" + contactName + "\" a été ajouté avec succès.");
+                    JOptionPane.showMessageDialog(frame, "Le contact \"" + contactName + "\" a été ajouté avec succès.", "Succès", JOptionPane.INFORMATION_MESSAGE);
 
 
-                    } catch (IOException ex) {
-                        ex.printStackTrace();
-                        JOptionPane.showMessageDialog(frame, "Erreur lors de la création du contact.", "Erreur", JOptionPane.ERROR_MESSAGE);
-
-                    }
                 }
             }
         });
@@ -90,15 +82,10 @@ public class Chat {
             public void actionPerformed(ActionEvent e) {
                 String groupName = JOptionPane.showInputDialog(frame, "Entrez nom de groupe:");
                 if (groupName != null && !groupName.trim().isEmpty()) {
-                    try {
-                        createGroup(groupName);
-                        System.out.println("Le groupe \"" + groupName + "\" a été créé avec succès.");
-                        JOptionPane.showMessageDialog(frame, "Le groupe \"" + groupName + "\" a été créé avec succès.", "Succès", JOptionPane.INFORMATION_MESSAGE);
+                    //clientMsg.creationGroupe(groupName);
+                    System.out.println("Le groupe \"" + groupName + "\" a été créé avec succès.");
+                    JOptionPane.showMessageDialog(frame, "Le groupe \"" + groupName + "\" a été créé avec succès.", "Succès", JOptionPane.INFORMATION_MESSAGE);
 
-                    } catch (IOException ex) {
-                        ex.printStackTrace();
-                        JOptionPane.showMessageDialog(frame, "Erreur lors de la création du groupe.", "Erreur", JOptionPane.ERROR_MESSAGE);
-                    }
                 }
             }
 
@@ -200,7 +187,7 @@ public class Chat {
 
         frame.validate();
         frame.repaint();    }
-    private void createGroup(String groupName) throws IOException {
+   /* private void createGroup(String groupName) throws IOException {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         DataOutputStream dos = new DataOutputStream(bos);
         dos.writeUTF(groupName);
@@ -208,7 +195,7 @@ public class Chat {
         dos.close();
         bos.close();
         contactListModel.addElement(groupName);
-    }
+    }*/
     /*private void addContactToUser() {
         String contactIdString = JOptionPane.showInputDialog(frame, "Enter contact's ID:");
         String contactName = JOptionPane.showInputDialog(frame, "Enter contact's name:");
@@ -343,7 +330,12 @@ public class Chat {
         sendButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                sendMessage();
+                String message = messageInput.getText().trim();
+                if (!message.isEmpty()) {
+                    //clientMsg.sendPacket(destinationId, message.getBytes(StandardCharsets.UTF_8));
+                    chatArea.append("You: " + message + "\n");
+                    messageInput.setText(""); // Clear input after sending
+                }
             }
         });
         inputPanel.add(sendButton, BorderLayout.EAST);
@@ -353,7 +345,7 @@ public class Chat {
         messageInput.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                sendMessage();
+                //sendMessage();
             }
         });
 
@@ -367,7 +359,7 @@ public class Chat {
         frame.setVisible(true);
     }
 
-    private void sendMessage() {
+    /*private void sendMessage() {
         String message = messageInput.getText().trim();
         if (!message.isEmpty()) {
             chatArea.append("Vous: " + message + "\n");  // Display the message in the chat area
@@ -386,7 +378,7 @@ public class Chat {
             initializeButtons();
 
         }
-    }
+    }*/
 
     private void customizeUIComponents() {
         // Personalization of the side bar
@@ -502,4 +494,3 @@ public class Chat {
         });
     }
 }
-
