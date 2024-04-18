@@ -238,34 +238,48 @@ public class ClientMsg {
 						// Suppose que le serveur envoie un byte pour définir le type de réponse.
 						byte responseType = buffer.get();
 
-						if (responseType == 1) { // Si le type de réponse est 1, cela signifie la création de groupe.
-							int groupId = buffer.get();
-							System.out.println("Le groupe numéro " + groupId + " a été créé.");
+					if (responseType == 1) { //création de groupe
+						int groupId = buffer.getInt();
+						int lengthMsg = buffer.getInt();
+						byte[] msgBytes = new byte[lengthMsg];
+						buffer.get(msgBytes);
+						String msg = new String(msgBytes, StandardCharsets.UTF_8);
+						System.out.println(msg);
 
-						}
-						else if (responseType == 9) {
-							System.out.println("packet received in receiveloop()");
-							//the packet contains an int for length and the username
-							int usernameLength = buffer.getInt();
-							byte[] usernameBytes = new byte[usernameLength];
-							buffer.get(usernameBytes);
-							String username = new String(usernameBytes, StandardCharsets.UTF_8); //retrieve the username
-							this.username = username; //set the username
-							System.out.println("username received : " + username);
-						}
-						else if (responseType == 10) { //authentication successful
-							System.out.println("You've been successfully authenticated. Type anything to continue.");
-							//set userId to the userId received in the packet
-							int newUserId = buffer.getInt();
-							/* SET HERE	*/		this.identifier = newUserId;
-							System.out.println("new id : "+ this.getIdentifier());
-							isAuthenticated = true ;
+					}
+					else if (responseType == 2 || responseType == 3 || responseType == 4) { //handle group deletion, whether it worked or not
+						int lengthMsg = buffer.getInt();
+						byte[] msgBytes = new byte[lengthMsg];
+						buffer.get(msgBytes);
+						String msg = new String(msgBytes, StandardCharsets.UTF_8);
+						System.out.println(msg);
+					}
 
-						}
-						else if (responseType == 11) {
-							System.out.println("Authentication failed. Please try again.");
-							isAuthenticated = false ;
-						}
+					else if (responseType == 9) { //info retrieval upon authentication
+						int usernameLength = buffer.getInt();
+						byte[] usernameBytes = new byte[usernameLength];
+						buffer.get(usernameBytes);
+						String username = new String(usernameBytes, StandardCharsets.UTF_8); //retrieve the username
+						this.username = username; //set the username
+
+						int passwordLength = buffer.getInt();
+						byte[] passwordBytes = new byte[passwordLength];
+						buffer.get(passwordBytes);
+						String password = new String(passwordBytes, StandardCharsets.UTF_8); //retrieve the password
+						this.password = password; //set the password
+					}
+//					else if (responseType == 10) { //authentication successful
+//						System.out.println("You've been successfully authenticated. Type anything to continue.");
+//						//set userId to the userId received in the packet
+//						int newUserId = buffer.getInt();
+//	/* SET HERE	*/		this.identifier = newUserId;
+//						System.out.println("new id : "+ this.getIdentifier());
+//						isAuthenticated = true ;
+//					}
+//					else if (responseType == 11) {
+//						System.out.println("Authentication failed. Please try again.");
+//						isAuthenticated = false ;
+//					}
 
 					} else {
 						notifyMessageListeners(new Packet(sender, dest, data));
@@ -325,14 +339,14 @@ public class ClientMsg {
 				c.askInfos();
 				c.isAuthenticated = true ;
 
-				//NEW USER : registers with an id given by the server. username and password chosen by the user
+			//NEW USER : registers with an id given by the server. username and password chosen by the user
 			} else if (rep.equalsIgnoreCase("R")) {
 				System.out.println("Enter your password: ");
 				String password = sc.nextLine();
 				c.startSession(password);
 				System.out.println("Enter your username: ");
 				String username = sc.nextLine();
-				c.username = username;
+				c.setUsername(username);
 				c.password = password;
 
 				System.out.println("you are now registered as " + c.getUsername() + " with id " + c.getIdentifier());
@@ -340,8 +354,8 @@ public class ClientMsg {
 			}
 		}
 
-		//wait for 1s
-		Thread.sleep(1000);
+		//wait for 0.5s
+		Thread.sleep(500);
 		//now, either the user registered, or the user is authenticated
 		System.out.println("Hello "+ c.getUsername() + "!");
 
@@ -376,7 +390,15 @@ public class ClientMsg {
 				}
 
 				else if (code == 1) { //creer un groupe
-					c.creationGroupe();
+					List<Integer> members = new ArrayList<>();
+					int member = 1;
+					// list of members
+					while (member != 0) {
+						System.out.println("add a member : (type 0 to exit)");
+						member = Integer.parseInt(sc.nextLine());
+						members.add(member);
+					}
+					c.creationGroupe(members);
 				}
 
 				else if (code == 2) { //supprimer un groupe
@@ -386,11 +408,23 @@ public class ClientMsg {
 				}
 
 				else if (code == 3) { //ajouter un member à un groupe
-					c.addMember();
+					System.out.println("\nDans quel groupe voulez-vous ajouter un membre?");
+					int idGroup = Integer.parseInt(sc.nextLine());
+
+					System.out.println("\nQuel utilisateur voulez-vous ajouter ?");
+					int userId = Integer.parseInt(sc.nextLine());
+
+					c.addMember(idGroup, userId);
 				}
 
-				else if (code == 4) { //supprimer un membre d'un groupe
-					c.removeMember();
+				else if (code == 4) { //supprimer un membre d'un
+					System.out.println("\nDans quel groupe voulez-vous supprimer un membre?");
+					int idGroup = Integer.parseInt(sc.nextLine()); // idGroup
+
+					System.out.println("\nQuel utilisateur voulez-vous supprimer ?");
+					int userId = Integer.parseInt(sc.nextLine());
+
+					c.removeMember(idGroup, userId);
 				}
 
 				else if (code == 5) { //changer de nom
@@ -402,9 +436,6 @@ public class ClientMsg {
 
 				else if (code == 7) { //change password
 					boolean reussi = c.updatePassword();
-					if (!reussi) {
-						continue;
-					}
 
 				} else if (code == 8) { // ajouter contact à un utilisateur
 					ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -443,6 +474,7 @@ public class ClientMsg {
 
 	/**
 	 * Update the password of the user
+	 * packet format (if correct password) : 1byte for the type (7), 4bytes (an int) for the length of the password, then the password
 	 * @return true if the password has been updated, false otherwise
 	 */
 	private boolean updatePassword() {
@@ -450,8 +482,6 @@ public class ClientMsg {
 
 		System.out.println("\nSaisissez votre ancien mot de passe : ");
 		String oldPassword = sc.nextLine();
-		System.out.println("old password : " + oldPassword);
-		System.out.println("this password : " + this.getPassword());
 		//get password associated with the username, without using the server
 		boolean isAuthenticated = this.getPassword().equals(oldPassword);
 		//if the password is correct, the server will ask for the new password
@@ -469,6 +499,7 @@ public class ClientMsg {
 				dos.write(newPassword.getBytes(StandardCharsets.UTF_8));
 				dos.flush();
 				this.sendPacket(0, bos.toByteArray());
+				System.out.println("Votre mot de passe a été modifié avec succès");
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -482,24 +513,20 @@ public class ClientMsg {
 
 	/**
 	 * Remove a member from a group on the server
+	 * packet format : 4byte for the type (4), 4bytes for the groupId, 4bytes for the userId
+	 * @param groupId : the id of the group
+	 * @param userId : the id of the user to remove
 	 */
-	private void removeMember() {
+	private void removeMember(int groupId, int userId) {
 		try {
-			Scanner sc = new Scanner(System.in);
+		ByteArrayOutputStream bos = new ByteArrayOutputStream();
+		DataOutputStream dos = new DataOutputStream(bos);
 
-			ByteArrayOutputStream bos = new ByteArrayOutputStream();
-			DataOutputStream dos = new DataOutputStream(bos);
-
-			dos.writeByte(4); //premier byte à 4 pour supprimer un membre
-			System.out.println("\nDans quel groupe voulez-vous supprimer un membre?");
-			int idGroup = Integer.parseInt(sc.nextLine()); // idGroup
-			dos.writeInt(idGroup);
-
-			System.out.println("\nQuel utilisateur voulez-vous supprimer ?");
-			int userId = Integer.parseInt(sc.nextLine());
-			dos.writeInt(userId);
-			dos.flush();
-			this.sendPacket(0, bos.toByteArray());
+		dos.writeByte(4); //premier byte à 4 pour supprimer un membre
+		dos.writeInt(groupId);
+		dos.writeInt(userId);
+		dos.flush();
+		this.sendPacket(0, bos.toByteArray());
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
@@ -507,22 +534,17 @@ public class ClientMsg {
 
 	/**
 	 * Add a member to a group on the server
-
+	 * packet format : 3byte for the type (3), 4bytes for the groupId, 4bytes for the userId
+	 * @param groupId : the id of the group
+	 * @param userId : the id of the user to add
 	 */
-	private void addMember() {
+	private void addMember(int groupId, int userId) {
 		try {
-			Scanner sc = new Scanner(System.in);
 			ByteArrayOutputStream bos = new ByteArrayOutputStream();
 			DataOutputStream dos = new DataOutputStream(bos);
 
-			// byte à 3 : ajouter un membre au serveur
 			dos.writeByte(3);
-			System.out.println("\nDans quel groupe voulez-vous ajouter un membre?");
-			int idGroup = Integer.parseInt(sc.nextLine()); // idGroup
-			dos.writeInt(idGroup);
-
-			System.out.println("\nQuel utilisateur voulez-vous ajouter ?");
-			int userId = Integer.parseInt(sc.nextLine());
+			dos.writeInt(groupId);
 			dos.writeInt(userId);
 			dos.flush();
 			this.sendPacket(0, bos.toByteArray());
@@ -537,6 +559,7 @@ public class ClientMsg {
 	private void supprimerGroupe(int idGroup) {
 		try {
 			ByteArrayOutputStream bos = new ByteArrayOutputStream();
+			DataOutputStream dos = new DataOutputStream(bos);
 
 			// byte 2 : delete group on server
 			dos.writeByte(2);
@@ -551,27 +574,16 @@ public class ClientMsg {
 
 	/**
 	 * Create a group on the server
+	 * packet format : 1byte for the type (1), 4bytes for the number of members, then the list of members
+	 * @param members : list of members to add to the group
 	 */
-	public void creationGroupe() {
+	private void creationGroupe(List<Integer> members) {
 		Scanner sc = new Scanner(System.in);
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		DataOutputStream dos = new DataOutputStream(bos);
-
-		// byte 1 : create group on server
 		try {
 			dos.writeByte(1);
-
-			//empty int list
-			List<Integer> members = new ArrayList<>();
-
-			int member = 1;
-			// list of members
-			while (member != 0) {
-				System.out.println("add a member : (type 0 to exit)");
-				member = Integer.parseInt(sc.nextLine());
-				members.add(member);
-			}
-			dos.writeInt(members.size()); //nb de membres envoyé dans le paquet
+			dos.writeInt(members.size()); //nb de membres dans le groupe
 			//on envoie dans le paquet chaque userId, le sender compris
 			dos.writeInt(this.getIdentifier()); //on envoie le sender
 			for (int i = 0 ; i < members.size() ; i++) {
@@ -596,7 +608,6 @@ public class ClientMsg {
 			dos.writeInt(this.getIdentifier());
 			dos.flush();
 			sendPacket(0, bos.toByteArray());
-			System.out.println("packet sent from askInfos");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

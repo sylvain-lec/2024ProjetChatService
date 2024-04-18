@@ -57,8 +57,8 @@ public class ServerPacketProcessor implements PacketProcessor {
 
 		else if (type == 7) { //update password
 			updatePassword(p, buf);
-
 		}
+
 		else if (type == 8) { //addContact
 			int userId = p.srcId; // récuperer Id user
 			int contactId = buf.getInt(); // id contact
@@ -72,7 +72,7 @@ public class ServerPacketProcessor implements PacketProcessor {
 		}
 
 		else if (type == 11) { //CASE INFORMATION RETRIEVAL
-			sendUsername(p, buf);
+			sendInfos(p, buf);
 		}
 
 
@@ -84,26 +84,40 @@ public class ServerPacketProcessor implements PacketProcessor {
 		}
 	}
 
-	private void sendUsername(Packet p, ByteBuffer buf) {
-		LOG.info("packet recieved for info retrieval");
+	/**
+	 * Sends the username of the user to the client when asked to. used by the client to get back its username after login
+	 * @param p
+	 * @param buf
+	 */
+	private void sendInfos(Packet p, ByteBuffer buf) {
 		int userId = p.srcId; //id du user
 		String username = server.getUser(userId).getUsername(); //on récupère le username
+		byte[] usernameBytes = username.getBytes(StandardCharsets.UTF_8);
+		int lengthU = username.getBytes().length; //longueur du username
 
-		//on envoie le username
-		byte[] usernameBytes = username.getBytes(StandardCharsets.UTF_8); //msg à envoyer, converti en bytes
-		int length = username.getBytes().length; //longueur du msg à envoyer
+		String password = server.getUser(userId).getPassword(); //on récupère le password
+		byte[] passwordBytes = password.getBytes(StandardCharsets.UTF_8);
+		int lengthP = password.getBytes().length; //longueur du password
 
 		// Create a byte buffer with 4 extra bytes for the length
-		ByteBuffer buffer = ByteBuffer.allocate(1 + 4 + length);
+		ByteBuffer buffer = ByteBuffer.allocate(1 + 4 + lengthU + 4 + lengthP);
 		buffer.put((byte) 9);
-		buffer.putInt(length);
+		buffer.putInt(lengthU);
 		buffer.put(usernameBytes);
+		buffer.putInt(lengthP);
+		buffer.put(passwordBytes);
+
 		// nv tableau qui concatène la longueur du msg et le msg lui-même
 		byte[] data = buffer.array();
 		Packet reponse = new Packet(0, userId, data); //on forme le packet
 		server.getUser(userId).process(reponse); //on l'envoie
 	}
 
+	/**
+	 * Reads the new password from the packet and updates the user's password
+	 * @param p
+	 * @param buf
+	 */
 	private void updatePassword(Packet p, ByteBuffer buf) {
 		int userId = p.srcId; //id du user
 		int length = buf.getInt(); //on recupere la longueur du password
@@ -116,6 +130,11 @@ public class ServerPacketProcessor implements PacketProcessor {
 		LOG.info("userId " + userId + " updated their password to : " + password);
 	}
 
+	/**
+	 * Reads the new username from the packet and updates the user's username
+	 * @param p
+	 * @param buf
+	 */
 	private void updateUsername(Packet p, ByteBuffer buf) {
 		int userId = p.srcId;
 		int length = buf.getInt();
@@ -126,7 +145,6 @@ public class ServerPacketProcessor implements PacketProcessor {
 		//on met à jour le username côté serveur (setUsername() de la classe UserMsg)
 		server.getUser(userId).setUsername(username);
 		LOG.info("userId " + userId + " a mis à jour son username en " + username);
-
 		//TRACE : print every userid and their username
 		LOG.info(server.getUsers());
 	}
@@ -178,7 +196,9 @@ public class ServerPacketProcessor implements PacketProcessor {
 		int length2 = msg.getBytes().length; //longueur du msg à envoyer
 
 // bytebuffer
-		ByteBuffer buffer2 = ByteBuffer.allocate(4 + length2);
+		ByteBuffer buffer2 = ByteBuffer.allocate(1+ 4 + 4 + length2);
+		buffer2.put((byte) 1);
+		buffer2.putInt(g.getId()); //on envoie l'id du groupe (pour que les membres puissent l'identifier
 		buffer2.putInt(length2);
 		buffer2.put(msgBytes);
 // nv tableau qui concatène la longueur du msg et le msg lui-même
@@ -196,30 +216,28 @@ for (UserMsg u : g.getMembers()) {
 
 	/**
 	 * Suppression d'un groupe
-	 *
+	 * packet format : type (1 byte) + groupId (4 bytes)
 	 * @param p : Packet qui demande la suppression d'un groupe
 	 */
 	public void removeGroup(Packet p) {
 		ByteBuffer buf = ByteBuffer.wrap(p.data);
 		buf.get(); //on se débarasse du premier byte, qui indique le type de protocole
 		int src = p.srcId;
-
-		//on récupère le numéro de groupe
-		int groupId = buf.getInt();
+		int groupId = buf.getInt(); //on récupère le numéro de groupe
 		//on récupère le groupe associé à ce groupId
 		GroupMsg groupe = server.getGroup(groupId);
-		if (groupe == null) {
 
+		if (groupe == null) {
 			// informer le sender par un packet que le groupe n'existe pas
 			String msg = "Le groupe " + groupId + " n'existe pas";
 			byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8); //msg à envoyer, converti en bytes
 			int length = msg.getBytes().length; //longueur du msg à envoyer
 
 			// créer un buffer avec 4 extra bytes pour la longueur
-			ByteBuffer buffer = ByteBuffer.allocate(4 + length);
+			ByteBuffer buffer = ByteBuffer.allocate(1+4 + length);
+			buffer.put((byte) 2);
 			buffer.putInt(length);
 			buffer.put(msgBytes);
-
 			// nv tableau qui concatène la longueur du msg et le msg lui-même
 			byte[] data = buffer.array();
 
@@ -227,6 +245,7 @@ for (UserMsg u : g.getMembers()) {
 			server.getUser(src).process(reponse); //on l'envoie
 
 			LOG.info("userId " + src + " a essayé de supprimer le groupe " + groupId + " qui n'existe pas"); //Trace pour le serveur
+
 		} else { //le groupe existe
 			// vérifier que le sender est le owner
 			if (src != groupe.getOwner().getId()) {
@@ -237,8 +256,9 @@ for (UserMsg u : g.getMembers()) {
 				int length = msg.getBytes().length; //longueur du msg à envoyer
 
 				// Create a byte buffer with 4 extra bytes for the length
-				ByteBuffer buffer = ByteBuffer.allocate(4 + length);
+				ByteBuffer buffer = ByteBuffer.allocate(1 + 4 + length);
 				// Put the length and the text bytes into the buffer
+				buffer.put((byte) 2);
 				buffer.putInt(length);
 				buffer.put(msgBytes);
 				// nv tableau qui concatène la longueur du msg et le msg lui-même
@@ -257,9 +277,10 @@ for (UserMsg u : g.getMembers()) {
 				int length = msg.getBytes().length;
 
 				// Create a byte buffer with 4 extra bytes for the length
-				ByteBuffer buffer = ByteBuffer.allocate(4 + length);
+				ByteBuffer buffer = ByteBuffer.allocate(1 + 4 + length);
 
 				// Put the length and the text bytes into the buffer
+				buffer.put((byte) 2);
 				buffer.putInt(length);
 				buffer.put(msgBytes);
 
@@ -268,7 +289,6 @@ for (UserMsg u : g.getMembers()) {
 
 				for (UserMsg u : groupe.getMembers()) {
 					Packet reponse = new Packet(0, u.getId(), data);
-
 					u.process(reponse);
 				}
 				server.removeGroup(groupId);
@@ -276,7 +296,13 @@ for (UserMsg u : g.getMembers()) {
 		}
 	}
 
-//	addMember(p.srcId, groupId, userId);
+	/**
+	 * Add a member to a group. The sender must be the owner of the group.
+	 * packet format : type (1 byte) + groupId (4 bytes) + userId (4 bytes)
+	 * @param srcId
+	 * @param groupId
+	 * @param userId
+	 */
 	private void addMember(int srcId, int groupId, int userId) {
 		GroupMsg group = server.getGroup(groupId);
 		if (group != null) {
@@ -287,14 +313,13 @@ for (UserMsg u : g.getMembers()) {
 				//msg à envoyer, converti en bytes
 				String msg = "User " + userId + " has been added to group " + groupId;
 				byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8);
-
-				//longueur du msg à envoyer
 				int length = msg.getBytes().length;
 
 				// Create a byte buffer with 4 extra bytes for the length
-				ByteBuffer buffer = ByteBuffer.allocate(4 + length);
+				ByteBuffer buffer = ByteBuffer.allocate(1 + 4 + length);
 
 				// Put the length and the text bytes into the buffer
+				buffer.put((byte) 3);
 				buffer.putInt(length);
 				buffer.put(msgBytes);
 
@@ -305,48 +330,78 @@ for (UserMsg u : g.getMembers()) {
 					Packet reponse = new Packet(0, u.getId(), data);
 					u.process(reponse);
 				}
-				LOG.info("trying to send a packet to notify members of the group");
 			} else {
 				LOG.warning("Attempt to add non-existent user " + userId + " to group " + groupId);
+				String msgNoUser = "User " + userId + " does not exist";
+				byte[] msgNoUserBytes = msgNoUser.getBytes(StandardCharsets.UTF_8);
+				int length = msgNoUser.getBytes().length;
+				ByteBuffer buffer = ByteBuffer.allocate(1 + 4 + length);
+				buffer.put((byte) 3);
+				buffer.putInt(length);
+				buffer.put(msgNoUserBytes);
+				byte[] data = buffer.array();
+				Packet reponse = new Packet(0, srcId, data);
+				server.getUser(srcId).process(reponse);
 			}
 		} else {
 			LOG.warning("Group " + groupId + " not found");
+			String msgNoGroup = "Group " + groupId + " does not exist";
+			byte[] msgNoGroupBytes = msgNoGroup.getBytes(StandardCharsets.UTF_8);
+			int length = msgNoGroup.getBytes().length;
+			ByteBuffer buffer = ByteBuffer.allocate(1 + 4 + length);
+			buffer.put((byte) 3);
+			buffer.putInt(length);
+			buffer.put(msgNoGroupBytes);
+			byte[] data = buffer.array();
+			Packet reponse = new Packet(0, srcId, data);
+			server.getUser(srcId).process(reponse);
 		}
 	}
+
+	/**
+	 * Remove a member from a group.
+	 * packet format : type (1 byte) + groupId (4 bytes) + userId (4 bytes)
+	 * @param ownerId
+	 * @param data
+	 */
 	private void removeMember(int ownerId, ByteBuffer data) {
 		int groupId = data.getInt();
 		int userId = data.getInt();
 		GroupMsg group = server.getGroup(groupId);
-		if (group != null) {
-			UserMsg user = server.getUser(userId);
-			if (user != null) {
-				group.removeMember(user);
+		String msg = null;
+		UserMsg user = server.getUser(userId);
+		if (group != null && user != null) {
+			group.removeMember(user);
+			// Envoyer une notification aux autres membres du groupe
+			msg = "User " + userId + " has been removed from group " + groupId;
+			byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8); //msg à envoyer, converti en bytes
+			int length = msg.getBytes().length; //longueur du msg à envoyer
 
-				// Envoyer une notification aux autres membres du groupe
-				String msg = "User " + userId + " has been removed from group " + groupId;
-				byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8); //msg à envoyer, converti en bytes
-				int length = msg.getBytes().length; //longueur du msg à envoyer
+			ByteBuffer buffer = ByteBuffer.allocate(1 + 4 + length);
+			buffer.put((byte) 4);
+			buffer.putInt(length);
+			buffer.put(msgBytes);
+			byte[] dataArray = buffer.array(); // nv tableau qui concatène la longueur du msg et le msg lui-même
 
-				ByteBuffer buffer = ByteBuffer.allocate(4 + length);
-				buffer.putInt(length);
-				buffer.put(msgBytes);
-
-			// nv tableau qui concatène la longueur du msg et le msg lui-même
-				byte[] dataArray = buffer.array();
-
-				for (UserMsg u : group.getMembers()) {
-					Packet reponse = new Packet(0, u.getId(), dataArray);
-					u.process(reponse);
-				}
-
-			} else {
-				LOG.warning("Attempt to remove non-existent user " + userId + " from group " + groupId);
+			for (UserMsg u : group.getMembers()) {
+				Packet reponse = new Packet(0, u.getId(), dataArray);
+				u.process(reponse);
 			}
-		} else {
-			LOG.warning("Group " + groupId + " not found");
+			return;
 		}
-
-
+		if (group != null) { //user doesn't exist
+			msg = "User " + userId + " does not exist or isn't in this group";
+		} else { //group == null
+			msg = "Group " + groupId + " does not exist"; }
+		byte[] msgBytes2 = msg.getBytes(StandardCharsets.UTF_8); //msg à envoyer, converti en bytes
+		int length2 = msg.getBytes().length; //longueur du msg à envoyer
+		ByteBuffer buffer2 = ByteBuffer.allocate(1 + 4 + length2);
+		buffer2.put((byte) 4);
+		buffer2.putInt(length2);
+		buffer2.put(msgBytes2);
+		byte[] dataArray2 = buffer2.array();
+		Packet reponse = new Packet(0, ownerId, dataArray2);
+		server.getUser(ownerId).process(reponse);
 	}
 
 //	private void login(int userId, ByteBuffer buf) {
