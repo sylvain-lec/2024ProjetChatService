@@ -129,7 +129,6 @@ public class ClientMsg {
 			dos.write(username.getBytes(StandardCharsets.UTF_8));
 			dos.flush();
 			sendPacket(0, bos.toByteArray());
-			System.out.println("packet for username update sent to server");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -137,64 +136,24 @@ public class ClientMsg {
 
 	public void setPassword(String password) {
 		this.password = password;
-	}
 
-	public String getPassword() {
-		return password;
-	}
-
-	public boolean sendLoginRequest(String username, String password) {
-		//DON'T UPDATE USERNAME AND PASSWORD HERE, BC AUTHENTICATION COULD FAIL. instead see receiveLoop()
-		//this.username = username;
-		//this.password = password;
-
-		//send packet to the server; the server will update the username.
-		//1byte for the type (6), 4 bytes for the username length,
-		//then the username, 4bytes for the password length, then the password
+		//send packet to the server; the server will update the password.
+		//1byte for the type (7), 4bytes (an int) for the length of the password, then the password
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		DataOutputStream dos = new DataOutputStream(bos);
 		try {
-			dos.writeByte(6);
-			dos.writeInt(username.length());
-			dos.write(username.getBytes(StandardCharsets.UTF_8));
+			dos.writeByte(7);
 			dos.writeInt(password.length());
 			dos.write(password.getBytes(StandardCharsets.UTF_8));
 			dos.flush();
 			sendPacket(0, bos.toByteArray());
-			//System.out.println("login packet sent from sendLoginRequest() in ClientMsg");
-
-
-//			// READ THE SERVER'S RESPONSE to return a boolean. i'm not sure it's the right place to do it.
-//			int length = dis.readInt();
-//			byte[] data = new byte[length];
-//			dis.readFully(data);
-///* TRACE */	System.out.println("TRACE : data received from server : " + new String(data));
-//			if (data.length > 0) {
-//				// The first byte of the data is the response type
-//				int responseType = data[0]; //PROBLEM : LENGTH 0
-//
-//				if (responseType == 0) { // Authentication failed
-//					System.out.println("Successfully authenticated.");
-//					return true;
-//				} else if (responseType == 1) { // Authentication succeeded
-//					System.out.println("Authentication failed. Please try again.");
-//					return false;
-//				} else {
-//					System.out.println("Received unexpected response type.");
-//					return false;
-//				}
-//			} else { //empty response
-///* TRACE */		System.out.println("ClientMsg received an empty reponse from the server");
-//				return false;
-//			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		return false;
-
 	}
-
-
+	public String getPassword() {
+		return password;
+	}
 
 	/**
 	 * Method to be called to establish the connection.
@@ -202,14 +161,14 @@ public class ClientMsg {
 	 * @throws UnknownHostException
 	 * @throws IOException
 	 */
-	public void startSession() throws UnknownHostException {
+	public void startSession(String password) throws UnknownHostException {
 		if (s == null || s.isClosed()) {
 			try {
 				s = new Socket(serverAddress, serverPort);
 				dos = new DataOutputStream(s.getOutputStream());
 				dis = new DataInputStream(s.getInputStream());
 				dos.writeInt(identifier);
-				//	dos.writeUTF(username);
+				dos.writeUTF(password);
 				dos.flush();
 				if (identifier == 0) {
 					identifier = dis.readInt();
@@ -270,13 +229,27 @@ public class ClientMsg {
 						// Suppose que le serveur envoie un byte pour définir le type de réponse.
 						byte responseType = buffer.get();
 
-						if (responseType == 1) { // Si le type de réponse est 1, cela signifie la création de groupe.
-							int groupId = buffer.getInt();
-							System.out.println("Le groupe numéro " + groupId + " a été créé.");
-						}
-						else if (responseType == 10) { //authentication successful
-							System.out.println("You've been successfully authenticated. Type anything to continue.");
-							isAuthenticated = true ;
+					if (responseType == 1) { // Si le type de réponse est 1, cela signifie la création de groupe.
+						int groupId = buffer.getInt();
+						System.out.println("Le groupe numéro " + groupId + " a été créé.");
+					}
+					else if (responseType == 9) {
+						System.out.println("packet received in receiveloop()");
+						//the packet contains an int for length and the username
+						int usernameLength = buffer.getInt();
+						byte[] usernameBytes = new byte[usernameLength];
+						buffer.get(usernameBytes);
+						String username = new String(usernameBytes, StandardCharsets.UTF_8); //retrieve the username
+						this.username = username; //set the username
+						System.out.println("username received : " + username);
+					}
+					else if (responseType == 10) { //authentication successful
+						System.out.println("You've been successfully authenticated. Type anything to continue.");
+						//set userId to the userId received in the packet
+						int newUserId = buffer.getInt();
+	/* SET HERE	*/		this.identifier = newUserId;
+						System.out.println("new id : "+ this.getIdentifier());
+						isAuthenticated = true ;
 
 						}
 						else if (responseType == 11) {
@@ -306,6 +279,25 @@ public class ClientMsg {
 		notifyConnectionListeners(false);
 	}
 
+	public void sendRegistrationRequest(String username, String password) throws IOException {
+		//send packet to the server; the server will update the username.
+		//1byte for the type (8), 4 bytes for the username length,
+		//then the username, 4bytes for the password length, then the password
+		ByteArrayOutputStream bos = new ByteArrayOutputStream();
+		DataOutputStream dos = new DataOutputStream(bos);
+		try {
+			dos.writeByte(8);
+			dos.writeInt(username.length());
+			dos.write(username.getBytes(StandardCharsets.UTF_8));
+			dos.writeInt(password.length());
+			dos.write(password.getBytes(StandardCharsets.UTF_8));
+			dos.flush();
+			sendPacket(0, bos.toByteArray());
+			System.out.println("registration packet sent to server");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 
 	public static void main(String[] args) throws UnknownHostException, IOException, InterruptedException {
 		ClientMsg c = new ClientMsg("localhost", 1666);
@@ -320,51 +312,51 @@ public class ClientMsg {
 		// add a connection listener that exit application when connection closed
 		c.addConnectionListener(active ->  {if (!active) System.exit(0);});
 
-		c.startSession();
 		Scanner sc = new Scanner(System.in);
 
-		// AUTHENTIFICATION
-		String rep = "a" ;
+		/* ----------------- AUTHENTIFICATION ------------------------- */
+		String rep = "b" ;
+		c.isAuthenticated = false ;
 
-		//while the user is trying to authenticate, and is not authenticated
-		while (!rep.equalsIgnoreCase("N") && !c.isAuthenticated) {
-			System.out.println("Voulez vous vous connecter? Y/N");
+		while (!c.isAuthenticated && !rep.equalsIgnoreCase("R")) {
+			//ask to register or authenticate
+			System.out.println("Do you want to authenticate or register as a new member? (A/R)");
 			rep = sc.nextLine();
-			if (rep.equals("Y") || rep.equals("y")) { //the user is trying to authenticate
-				System.out.println("Entrez votre nom d'utilisateur : ");
-				String username = sc.nextLine();
-				System.out.println("Entrez votre mot de passe : ");
+
+			//AUTHENTIFICATION :
+			if (rep.equalsIgnoreCase("A")) {
+				System.out.println("what is your id ?");
+				int id = Integer.parseInt(sc.nextLine());
+				c.identifier = id;
+				System.out.println("Enter your password: ");
 				String password = sc.nextLine();
-				c.sendLoginRequest(username, password);
-				System.out.println(c.getUsername());
-				if (c.isAuthenticated) {
-					c.setUsername(username);
-					break;
-				}
+				c.startSession(password); //prendre en paramètre un mot de passe
+
+				//send packet to retrieve username and password from server
+				c.askInfos();
+				//c.sendLoginRequest(id, username, password);
+				c.isAuthenticated = true ;
+
+				//send a packet to the server to authenticate the user
+				//	c.sendLoginRequest(id, username, password);
+
+			//NEW USER : registers with an id given by the server. username and password chosen by the user
+			} else if (rep.equalsIgnoreCase("R")) {
+				System.out.println("Enter your password: ");
+				String password = sc.nextLine();
+				c.startSession(password);
+				System.out.println("Enter your username: ");
+				String username = sc.nextLine();
+
+				System.out.println("you are now registered as " + c.getUsername() + " with id " + c.getIdentifier());
+				c.isAuthenticated = true ;
 			}
 		}
-		//now, either the user is authenticated, or they chose not to authenticate
+
+		//wait for 1s
+		Thread.sleep(1000);
+		//now, either the user registered, or the user is authenticated
 		System.out.println("Hello "+ c.getUsername() + "!");
-
-
-
-//		while (!rep.equals("Y") && !rep.equals("N")) {
-//			System.out.println("Voulez vous vous connecter? Y/N");
-//			rep = sc.nextLine();
-//		}
-//		if (rep.equals("Y")) {
-//			System.out.println("Entrez votre nom d'utilisateur : ");
-//			String username = sc.nextLine();
-//			c.setUsername(username);
-//			System.out.println("Entrez votre mot de passe : ");
-//			String password = sc.nextLine();
-//			c.sendLoginRequest(username, password);
-//			System.out.println("Vous êtes " + c.getUsername());
-//
-//		}
-//		else {
-//			System.out.println("\nVous êtes : " + c.getUsername());
-//		}
 
 		String lu = null;
 		while (!"\\quit".equals(lu)) {
@@ -469,13 +461,13 @@ public class ClientMsg {
 				}
 
 				else if (code == 5) { //changer de nom
-					System.out.println("\nNouveau nom d'utilisateur : ");
+					System.out.println("\nNew username : ");
 					String newUsername = sc.nextLine();
 					c.setUsername(newUsername);
-					System.out.println("Vous êtes " + c.getUsername());
+					System.out.println("\nYou are " + c.getUsername());
 				}
-
-				else if (code == 7) { //change password
+/*************** MAYBE 6? ***********/
+				else if (code == 7) { //change password. MAYBE 6
 					System.out.println("\nSaisissez votre ancien mot de passe : ");
 					String oldPassword = sc.nextLine();
 					//get password associated with the username, without using the server
@@ -534,20 +526,26 @@ public class ClientMsg {
 			}
 		}
 
-
-
-		/*
-		 * int id =1+(c.getIdentifier()-1) % 2; System.out.println("send to "+id);
-		 * c.sendPacket(id, "bonjour".getBytes());
-		 *
-		 *
-		 * Thread.sleep(10000);
-		 */
-
 		c.closeSession();
 
 	}
 
+	/**
+	 * Ask the server for the username and password associated with the userId
+	 */
+	private void askInfos() {
+		ByteArrayOutputStream bos = new ByteArrayOutputStream();
+		DataOutputStream dos = new DataOutputStream(bos);
+		try {
+			dos.writeByte(9);
+			dos.writeInt(this.getIdentifier());
+			dos.flush();
+			sendPacket(0, bos.toByteArray());
+			System.out.println("packet sent from askInfos");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 
 
 }

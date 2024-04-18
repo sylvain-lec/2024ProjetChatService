@@ -91,6 +91,49 @@ public class ServerPacketProcessor implements PacketProcessor {
 			LOG.info("packet to add contact received by the server");
 
 		}
+
+		else if (type == 8) { //REGISTER CASE
+			int userId = p.srcId; //id du user
+			int usernameLength = buf.getInt(); //on recupere la longueur du username
+			byte[] usernameBytes = new byte[usernameLength]; //on recupere le username
+			buf.get(usernameBytes);
+			String username = new String(usernameBytes, StandardCharsets.UTF_8);
+
+			int passwordLength = buf.getInt(); //on recupere la longueur du password
+			byte[] passwordBytes = new byte[passwordLength]; //on recupere le password
+			buf.get(passwordBytes);
+			String password = new String(passwordBytes, StandardCharsets.UTF_8);
+
+			//on met à jour le password côté serveur (setPassword() de la classe UserMsg)
+			server.getUser(userId).setPassword(password);
+			server.getUser(userId).setUsername(username);
+
+			LOG.info("userId " + userId + " created an account. Password : " + password);
+		}
+
+		else if (type == 9) { //CASE INFORMATION RETRIEVAL
+			LOG.info("packet recieved for info retrieval");
+			int userId = p.srcId; //id du user
+			String username = server.getUser(userId).getUsername(); //on récupère le username
+
+			//on envoie le username
+			byte[] usernameBytes = username.getBytes(StandardCharsets.UTF_8); //msg à envoyer, converti en bytes
+			int length = username.getBytes().length; //longueur du msg à envoyer
+
+			// Create a byte buffer with 4 extra bytes for the length
+			ByteBuffer buffer = ByteBuffer.allocate(1 + 4 + length);
+			buffer.put((byte) 9);
+			buffer.putInt(length);
+			buffer.put(usernameBytes);
+			// nv tableau qui concatène la longueur du msg et le msg lui-même
+			byte[] data = buffer.array();
+			Packet reponse = new Packet(0, userId, data); //on forme le packet
+			server.getUser(userId).process(reponse); //on l'envoie
+		}
+
+
+
+
 			//dans le cas où le type n'est pas déterminé
 		else {
 				LOG.warning("Server message of type=" + type + " not handled by procesor");
@@ -313,6 +356,7 @@ for (UserMsg u : g.getMembers()) {
 	}
 
 	private void login(int userId, ByteBuffer buf) {
+		LOG.info("on est dans login()");
 		int usernameLength = buf.getInt();
 		byte[] usernameBytes = new byte[usernameLength];
 		buf.get(usernameBytes);
@@ -324,26 +368,31 @@ for (UserMsg u : g.getMembers()) {
 		String password = new String(passwordBytes, StandardCharsets.UTF_8);
 
 		// Authenticate the user
-		boolean authenticated = server.authenticateUser(userId, password);
-		if (authenticated) {
+		int userIdTentative = server.authenticateUser(username, password);
+		//AUTHENTICATION SUCCEEDED
+		if (userIdTentative != 0) {
 			LOG.info("from ServerPacketProcessor, login() : User " + username + " authenticated successfully");
 
 			// Send a message to the user to confirm the authentication
-			String msg = "from ServerPacketProcessor, login() : authenticated successfully";
-			byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8);
-			int length = msg.getBytes().length;
+			//AND SEND THEM THEIR USERID
 			byte confirmationCode = 10; // 10 is the confirmation code for successful authentication
-			ByteBuffer buffer = ByteBuffer.allocate(1 + 4 + length);
+			//get userId associated with this username and password
+
+			ByteBuffer buffer = ByteBuffer.allocate(1 + 4 );
 			buffer.put(confirmationCode);
-			buffer.putInt(length);
-			buffer.put(msgBytes);
+			buffer.putInt(userIdTentative);
 			byte[] data = buffer.array();
 			Packet reponse = new Packet(0, userId, data);
 			server.getUser(userId).process(reponse); //getUser() in ServerMsg
-		} else {
+			LOG.info("old user id found : " + userIdTentative);
+
+
+			//AUTHENTICATION FAILED
+		} else { //authenticateUser returned 0, which means the userId wasn't found
 			LOG.info("\nfrom ServerPacketProcessor, login() : Authentication failed for user " + username);
 
 			// Send a message to the user to inform that the authentication failed
+			//MESSAGE INUTILE
 			String msg = "\nfrom ServerPacketProcessor, login() : Authentication failed";
 			byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8);
 			int length = msg.getBytes().length;
