@@ -144,8 +144,9 @@ public class ClientMsg {
 	}
 
 	public boolean sendLoginRequest(String username, String password) {
-		this.username = username;
-		this.password = password;
+		//DON'T UPDATE USERNAME AND PASSWORD HERE, BC AUTHENTICATION COULD FAIL. instead see receiveLoop()
+		//this.username = username;
+		//this.password = password;
 
 		//send packet to the server; the server will update the username.
 		//1byte for the type (6), 4 bytes for the username length,
@@ -270,6 +271,7 @@ public class ClientMsg {
 					else if (responseType == 10) { //authentication successful
 						System.out.println("You've been successfully authenticated. Type anything to continue.");
 						isAuthenticated = true ;
+
 					}
 					else if (responseType == 11) {
 						System.out.println("Authentication failed. Please try again.");
@@ -304,8 +306,8 @@ public class ClientMsg {
 		// add a dummy listener that print the content of message as a string
 
 		c.addMessageListener(p -> {
-			String username = c.getUsername();
-			System.out.println(username + " says to " + p.destId + ": " + new String(p.data));
+//			String username = c.getUsername();
+			System.out.println(p.srcId + " says to " + p.destId + ": " + new String(p.data));
 		});
 
 		// add a connection listener that exit application when connection closed
@@ -318,10 +320,10 @@ public class ClientMsg {
 		String rep = "a" ;
 
 		//while the user is trying to authenticate, and is not authenticated
-		while (!rep.equals("N") && !c.isAuthenticated) {
+		while (!rep.equalsIgnoreCase("N") && !c.isAuthenticated) {
 			System.out.println("Voulez vous vous connecter? Y/N");
 			rep = sc.nextLine();
-			if (rep.equals("Y")) { //the user is trying to authenticate
+			if (rep.equals("Y") || rep.equals("y")) { //the user is trying to authenticate
 				System.out.println("Entrez votre nom d'utilisateur : ");
 				String username = sc.nextLine();
 				System.out.println("Entrez votre mot de passe : ");
