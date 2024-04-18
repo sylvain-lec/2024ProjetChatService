@@ -238,7 +238,7 @@ public class ClientMsg {
 						// Suppose que le serveur envoie un byte pour définir le type de réponse.
 						byte responseType = buffer.get();
 
-					if (responseType == 1) { // Si le type de réponse est 1, cela signifie la création de groupe.
+					if (responseType == 1) { //création de groupe
 						int groupId = buffer.getInt();
 						int lengthMsg = buffer.getInt();
 						byte[] msgBytes = new byte[lengthMsg];
@@ -247,15 +247,21 @@ public class ClientMsg {
 						System.out.println(msg);
 
 					}
+					else if (responseType == 2 || responseType == 3 || responseType == 4) { //handle group deletion, whether it worked or not
+						int lengthMsg = buffer.getInt();
+						byte[] msgBytes = new byte[lengthMsg];
+						buffer.get(msgBytes);
+						String msg = new String(msgBytes, StandardCharsets.UTF_8);
+						System.out.println(msg);
+					}
+
 					else if (responseType == 9) {
-						System.out.println("packet received in receiveloop()");
 						//the packet contains an int for length and the username
 						int usernameLength = buffer.getInt();
 						byte[] usernameBytes = new byte[usernameLength];
 						buffer.get(usernameBytes);
 						String username = new String(usernameBytes, StandardCharsets.UTF_8); //retrieve the username
 						this.username = username; //set the username
-						System.out.println("username received : " + username);
 					}
 					else if (responseType == 10) { //authentication successful
 						System.out.println("You've been successfully authenticated. Type anything to continue.");
