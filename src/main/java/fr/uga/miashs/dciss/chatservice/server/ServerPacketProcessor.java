@@ -52,90 +52,95 @@ public class ServerPacketProcessor implements PacketProcessor {
 			removeMember(p.srcId, buf);
 		}
 		else if (type == 5) { //cas mettre a jour le username
-			int userId = p.srcId;
-			int length = buf.getInt();
-			byte[] usernameBytes = new byte[length];
-			buf.get(usernameBytes);
-			String username = new String(usernameBytes, StandardCharsets.UTF_8);
-
-			//on met à jour le username côté serveur (setUsername() de la classe UserMsg)
-			server.getUser(userId).setUsername(username);
-			LOG.info("userId " + userId + " a mis à jour son username en " + username);
-
-			//TRACE : print every userid and their username
-			LOG.info(server.getUsers());
+			updateUsername(p, buf);
 		}
-		else if (type == 6) { //cas login
-			//call method :
-			login(p.srcId, buf);
-		}
+
 		else if (type == 7) { //update password
-			int userId = p.srcId; //id du user
-			int length = buf.getInt(); //on recupere la longueur du password
-			byte[] passwordBytes = new byte[length]; //on recupere le password
-			buf.get(passwordBytes);
-			String password = new String(passwordBytes, StandardCharsets.UTF_8);
+			updatePassword(p, buf);
 
-			//on met à jour le password côté serveur (setPassword() de la classe UserMsg)
-			server.getUser(userId).setPassword(password);
-			LOG.info("userId " + userId + " updated their password to : " + password);
-
-		}else if (type == 8) { //addContact
+		}
+		else if (type == 8) { //addContact
 			int userId = p.srcId; // récuperer Id user
 			int contactId = buf.getInt(); // id contact
 			int contactNameLength = buf.getInt(); // longueur du nom du contact
 			byte[] contactNameBytes = new byte[contactNameLength];
 			buf.get(contactNameBytes); // lire le nom du contact
 			String contactName = new String(contactNameBytes, StandardCharsets.UTF_8);
-			addContact(userId, buf);
+			addContact(userId, contactId, contactName);
 			LOG.info("packet to add contact received by the server");
 
 		}
+
+		else if (type == 11) { //CASE INFORMATION RETRIEVAL
+			sendUsername(p, buf);
+		}
+
+
+
+
 			//dans le cas où le type n'est pas déterminé
 		else {
 				LOG.warning("Server message of type=" + type + " not handled by procesor");
 		}
 	}
 
-	public void addContact(int userId, ByteBuffer buf) {
-		// Extract contact ID and contact name from the buffer
-		int contactId = buf.getInt();
-		int contactNameLength = buf.getInt();
-		byte[] contactNameBytes = new byte[contactNameLength];
-		buf.get(contactNameBytes);
-		String contactName = new String(contactNameBytes, StandardCharsets.UTF_8);
+	private void sendUsername(Packet p, ByteBuffer buf) {
+		LOG.info("packet recieved for info retrieval");
+		int userId = p.srcId; //id du user
+		String username = server.getUser(userId).getUsername(); //on récupère le username
 
-		// Get the user and attempt to add the contact
-		UserMsg user = server.getUser(userId);
-		if (user != null) {
-			user.addContact(contactId, contactName);
-			LOG.info("Contact " + contactName + " added for user with ID " + userId);
+		//on envoie le username
+		byte[] usernameBytes = username.getBytes(StandardCharsets.UTF_8); //msg à envoyer, converti en bytes
+		int length = username.getBytes().length; //longueur du msg à envoyer
 
-			// Send a confirmation message to the user
-			String confirmationMessage = "Contact " + contactName + " added successfully";
-			byte[] confirmationMessageBytes = confirmationMessage.getBytes(StandardCharsets.UTF_8);
-			int confirmationMessageLength = confirmationMessageBytes.length;
-			ByteBuffer confirmationBuffer = ByteBuffer.allocate(4 + confirmationMessageLength);
-			confirmationBuffer.putInt(confirmationMessageLength);
-			confirmationBuffer.put(confirmationMessageBytes);
-			byte[] confirmationData = confirmationBuffer.array();
-			Packet confirmationPacket = new Packet(0, userId, confirmationData);
-			server.getUser(userId).process(confirmationPacket);
-		} else {
-			LOG.warning("User with ID " + userId + " not found. Contact not added.");
-
-			// Optionally, send an error message back to the client
-			String errorMessage = "User not found, contact not added.";
-			byte[] errorMessageBytes = errorMessage.getBytes(StandardCharsets.UTF_8);
-			ByteBuffer errorBuffer = ByteBuffer.allocate(4 + errorMessageBytes.length);
-			errorBuffer.putInt(errorMessageBytes.length);
-			errorBuffer.put(errorMessageBytes);
-			byte[] errorData = errorBuffer.array();
-			Packet errorPacket = new Packet(0, userId, errorData);
-			server.getUser(userId).process(errorPacket);
-		}
+		// Create a byte buffer with 4 extra bytes for the length
+		ByteBuffer buffer = ByteBuffer.allocate(1 + 4 + length);
+		buffer.put((byte) 9);
+		buffer.putInt(length);
+		buffer.put(usernameBytes);
+		// nv tableau qui concatène la longueur du msg et le msg lui-même
+		byte[] data = buffer.array();
+		Packet reponse = new Packet(0, userId, data); //on forme le packet
+		server.getUser(userId).process(reponse); //on l'envoie
 	}
 
+	private void updatePassword(Packet p, ByteBuffer buf) {
+		int userId = p.srcId; //id du user
+		int length = buf.getInt(); //on recupere la longueur du password
+		byte[] passwordBytes = new byte[length]; //on recupere le password
+		buf.get(passwordBytes);
+		String password = new String(passwordBytes, StandardCharsets.UTF_8);
+
+		//on met à jour le password côté serveur (setPassword() de la classe UserMsg)
+		server.getUser(userId).setPassword(password);
+		LOG.info("userId " + userId + " updated their password to : " + password);
+	}
+
+	private void updateUsername(Packet p, ByteBuffer buf) {
+		int userId = p.srcId;
+		int length = buf.getInt();
+		byte[] usernameBytes = new byte[length];
+		buf.get(usernameBytes);
+		String username = new String(usernameBytes, StandardCharsets.UTF_8);
+
+		//on met à jour le username côté serveur (setUsername() de la classe UserMsg)
+		server.getUser(userId).setUsername(username);
+		LOG.info("userId " + userId + " a mis à jour son username en " + username);
+
+		//TRACE : print every userid and their username
+		LOG.info(server.getUsers());
+	}
+
+	private void addContact(int userId, int contactId, String contactName) {
+		UserMsg user = server.getUser(userId);
+		if (user != null) {
+			// Ajoute le contact à l'utilisateur
+			user.addContact(contactId, contactName);
+			LOG.info("Contact added successfully for user with ID: " + userId + ", contact ID: " + contactId + ", contact Name: " + contactName);
+		} else {
+			LOG.warning("User with ID " + userId + " not found. Contact not added.");
+		}
+	}
 
 
 
@@ -145,32 +150,48 @@ public class ServerPacketProcessor implements PacketProcessor {
 		for (int i = 0; i < nb; i++) {
 			g.addMember(server.getUser(data.getInt()));
 		}
+		//Packet qui informe le owner que le groupe a été créé
+		String msgOwner = "Vous avez créé le groupe " + g.getId() ;
+		byte[] msgOwnerBytes = msgOwner.getBytes(StandardCharsets.UTF_8);//msg à envoyer, converti en bytes
+		int length = msgOwner.getBytes().length;
+		// bytebuffer
+		ByteBuffer buffer = ByteBuffer.allocate(1+ 4 + 4 + length);
+		buffer.put((byte) 1);
+		buffer.putInt(g.getId());
+		buffer.putInt(length);
+		buffer.put(msgOwnerBytes);
+		// nv tableau qui concatène la longueur du msg et le msg lui-même
+		byte[] dataMsg = buffer.array();
 
-		// Envoyer un message de confirmation au propriétaire du groupe
-		String confirmationMessage = "Le groupe " + g.getId() + " a été créé avec succès";
-		byte[] confirmationMessageBytes = confirmationMessage.getBytes(StandardCharsets.UTF_8);
-		int confirmationMessageLength = confirmationMessageBytes.length;
-		ByteBuffer confirmationBuffer = ByteBuffer.allocate(4 + confirmationMessageLength);
-		confirmationBuffer.putInt(confirmationMessageLength);
-		confirmationBuffer.put(confirmationMessageBytes);
-		byte[] confirmationData = confirmationBuffer.array();
-		Packet confirmationPacket = new Packet(0, ownerId, confirmationData);
-		server.getUser(ownerId).process(confirmationPacket);
+		Packet reponse = new Packet(0, ownerId, dataMsg);
+		server.getUser(ownerId).process(reponse);
 
-		// Envoyer un message aux autres membres du groupe
-		String groupCreatedMessage = "Le groupe " + g.getId() + " a été créé par l'utilisateur " + ownerId;
-		for (UserMsg u : g.getMembers()) {
+		// packet qui informe les autres membres du groupe de la création du groupe
+		String msg = "Le groupe " + g.getId() + " a été créé par le user " + ownerId + ". Les membres sont : ";
+		for (UserMsg u : g.getMembers()) { //ajouter à la string le userid de chaque membre.
+			msg += u.getId() + ", ";
+		}
+		//remove last ","
+		msg = msg.substring(0, msg.length() - 2);
+
+		byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8); //msg à envoyer, converti en bytes
+		int length2 = msg.getBytes().length; //longueur du msg à envoyer
+
+// bytebuffer
+		ByteBuffer buffer2 = ByteBuffer.allocate(4 + length2);
+		buffer2.putInt(length2);
+		buffer2.put(msgBytes);
+// nv tableau qui concatène la longueur du msg et le msg lui-même
+		byte[] dataMsg2 = buffer2.array();
+
+		//send to everyone, except to the owner
+for (UserMsg u : g.getMembers()) {
 			if (u.getId() != ownerId) {
-				byte[] groupCreatedMessageBytes = groupCreatedMessage.getBytes(StandardCharsets.UTF_8);
-				int groupCreatedMessageLength = groupCreatedMessageBytes.length;
-				ByteBuffer groupCreatedBuffer = ByteBuffer.allocate(4 + groupCreatedMessageLength);
-				groupCreatedBuffer.putInt(groupCreatedMessageLength);
-				groupCreatedBuffer.put(groupCreatedMessageBytes);
-				byte[] groupCreatedData = groupCreatedBuffer.array();
-				Packet groupCreatedPacket = new Packet(0, u.getId(), groupCreatedData);
-				u.process(groupCreatedPacket);
+				Packet reponse2 = new Packet(0, u.getId(), dataMsg2);
+				u.process(reponse2);
 			}
 		}
+
 	}
 
 	/**
@@ -284,6 +305,7 @@ public class ServerPacketProcessor implements PacketProcessor {
 					Packet reponse = new Packet(0, u.getId(), data);
 					u.process(reponse);
 				}
+				LOG.info("trying to send a packet to notify members of the group");
 			} else {
 				LOG.warning("Attempt to add non-existent user " + userId + " to group " + groupId);
 			}
@@ -327,49 +349,55 @@ public class ServerPacketProcessor implements PacketProcessor {
 
 	}
 
-	private void login(int userId, ByteBuffer buf) {
-		int usernameLength = buf.getInt();
-		byte[] usernameBytes = new byte[usernameLength];
-		buf.get(usernameBytes);
-		String username = new String(usernameBytes, StandardCharsets.UTF_8);
-
-		int passwordLength = buf.getInt();
-		byte[] passwordBytes = new byte[passwordLength];
-		buf.get(passwordBytes);
-		String password = new String(passwordBytes, StandardCharsets.UTF_8);
-
-		// Authenticate the user
-		boolean authenticated = server.authenticateUser(userId, password);
-		if (authenticated) {
-			LOG.info("from ServerPacketProcessor, login() : User " + username + " authenticated successfully");
-
-			// Send a message to the user to confirm the authentication
-			String msg = "from ServerPacketProcessor, login() : authenticated successfully";
-			byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8);
-			int length = msg.getBytes().length;
-			byte confirmationCode = 10; // 10 is the confirmation code for successful authentication
-			ByteBuffer buffer = ByteBuffer.allocate(1 + 4 + length);
-			buffer.put(confirmationCode);
-			buffer.putInt(length);
-			buffer.put(msgBytes);
-			byte[] data = buffer.array();
-			Packet reponse = new Packet(0, userId, data);
-			server.getUser(userId).process(reponse); //getUser() in ServerMsg
-		} else {
-			LOG.info("\nfrom ServerPacketProcessor, login() : Authentication failed for user " + username);
-
-			// Send a message to the user to inform that the authentication failed
-			String msg = "\nfrom ServerPacketProcessor, login() : Authentication failed";
-			byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8);
-			int length = msg.getBytes().length;
-			byte confirmationCode = 11; // 11 is the code for authentication failure
-			ByteBuffer buffer = ByteBuffer.allocate(1 + 4 + length);
-			buffer.put(confirmationCode);
-			buffer.putInt(length);
-			buffer.put(msgBytes);
-			byte[] data = buffer.array();
-			Packet reponse = new Packet(0, userId, data);
-			server.getUser(userId).process(reponse);
-		}
-	}
+//	private void login(int userId, ByteBuffer buf) {
+//		LOG.info("on est dans login()");
+//		int usernameLength = buf.getInt();
+//		byte[] usernameBytes = new byte[usernameLength];
+//		buf.get(usernameBytes);
+//		String username = new String(usernameBytes, StandardCharsets.UTF_8);
+//
+//		int passwordLength = buf.getInt();
+//		byte[] passwordBytes = new byte[passwordLength];
+//		buf.get(passwordBytes);
+//		String password = new String(passwordBytes, StandardCharsets.UTF_8);
+//
+//		// Authenticate the user
+//		int userIdTentative = server.authenticateUser(username, password);
+//		//AUTHENTICATION SUCCEEDED
+//		if (userIdTentative != 0) {
+//			LOG.info("from ServerPacketProcessor, login() : User " + username + " authenticated successfully");
+//
+//			// Send a message to the user to confirm the authentication
+//			//AND SEND THEM THEIR USERID
+//			byte confirmationCode = 10; // 10 is the confirmation code for successful authentication
+//			//get userId associated with this username and password
+//
+//			ByteBuffer buffer = ByteBuffer.allocate(1 + 4 );
+//			buffer.put(confirmationCode);
+//			buffer.putInt(userIdTentative);
+//			byte[] data = buffer.array();
+//			Packet reponse = new Packet(0, userId, data);
+//			server.getUser(userId).process(reponse); //getUser() in ServerMsg
+//			LOG.info("old user id found : " + userIdTentative);
+//
+//
+//			//AUTHENTICATION FAILED
+//		} else { //authenticateUser returned 0, which means the userId wasn't found
+//			LOG.info("\nfrom ServerPacketProcessor, login() : Authentication failed for user " + username);
+//
+//			// Send a message to the user to inform that the authentication failed
+//			//MESSAGE INUTILE
+//			String msg = "\nfrom ServerPacketProcessor, login() : Authentication failed";
+//			byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8);
+//			int length = msg.getBytes().length;
+//			byte confirmationCode = 11; // 11 is the code for authentication failure
+//			ByteBuffer buffer = ByteBuffer.allocate(1 + 4 + length);
+//			buffer.put(confirmationCode);
+//			buffer.putInt(length);
+//			buffer.put(msgBytes);
+//			byte[] data = buffer.array();
+//			Packet reponse = new Packet(0, userId, data);
+//			server.getUser(userId).process(reponse);
+//		}
+//	}
 }
