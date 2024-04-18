@@ -82,6 +82,28 @@ public class ServerPacketProcessor implements PacketProcessor {
 			server.getUser(userId).setPassword(password);
 			LOG.info("userId " + userId + " updated their password to : " + password);
 		}
+
+		else if (type == 8) { //REGISTER CASE
+			int userId = p.srcId; //id du user
+			int usernameLength = buf.getInt(); //on recupere la longueur du username
+			byte[] usernameBytes = new byte[usernameLength]; //on recupere le username
+			buf.get(usernameBytes);
+			String username = new String(usernameBytes, StandardCharsets.UTF_8);
+
+			int passwordLength = buf.getInt(); //on recupere la longueur du password
+			byte[] passwordBytes = new byte[passwordLength]; //on recupere le password
+			buf.get(passwordBytes);
+			String password = new String(passwordBytes, StandardCharsets.UTF_8);
+
+			//on met à jour le password côté serveur (setPassword() de la classe UserMsg)
+			server.getUser(userId).setPassword(password);
+			server.getUser(userId).setUsername(username);
+
+			LOG.info("userId " + userId + " created an account. Password : " + password);
+		}
+
+
+
 			//dans le cas où le type n'est pas déterminé
 		else {
 				LOG.warning("Server message of type=" + type + " not handled by procesor");

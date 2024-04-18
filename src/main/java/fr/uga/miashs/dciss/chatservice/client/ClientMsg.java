@@ -129,7 +129,6 @@ public class ClientMsg {
 			dos.write(username.getBytes(StandardCharsets.UTF_8));
 			dos.flush();
 			sendPacket(0, bos.toByteArray());
-			System.out.println("packet for username update sent to server");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -163,35 +162,10 @@ public class ClientMsg {
 			sendPacket(0, bos.toByteArray());
 			//System.out.println("login packet sent from sendLoginRequest() in ClientMsg");
 
-
-//			// READ THE SERVER'S RESPONSE to return a boolean. i'm not sure it's the right place to do it.
-//			int length = dis.readInt();
-//			byte[] data = new byte[length];
-//			dis.readFully(data);
-///* TRACE */	System.out.println("TRACE : data received from server : " + new String(data));
-//			if (data.length > 0) {
-//				// The first byte of the data is the response type
-//				int responseType = data[0]; //PROBLEM : LENGTH 0
-//
-//				if (responseType == 0) { // Authentication failed
-//					System.out.println("Successfully authenticated.");
-//					return true;
-//				} else if (responseType == 1) { // Authentication succeeded
-//					System.out.println("Authentication failed. Please try again.");
-//					return false;
-//				} else {
-//					System.out.println("Received unexpected response type.");
-//					return false;
-//				}
-//			} else { //empty response
-///* TRACE */		System.out.println("ClientMsg received an empty reponse from the server");
-//				return false;
-//			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		return false;
-
 	}
 
 
@@ -299,6 +273,46 @@ public class ClientMsg {
 		notifyConnectionListeners(false);
 	}
 
+	//AUTHENTIFICATION
+	public void authenticateOrRegister() throws IOException {
+		Scanner sc = new Scanner(System.in);
+		while (!isAuthenticated) {
+			System.out.println("Do you want to authenticate or register as a new member? (A/R)");
+			String rep = sc.nextLine();
+			if (rep.equalsIgnoreCase("A")) {
+				System.out.println("Enter your username: ");
+				String username = sc.nextLine();
+				System.out.println("Enter your password: ");
+				String password = sc.nextLine();
+				sendLoginRequest(username, password);
+			} else if (rep.equalsIgnoreCase("R")) {
+				System.out.println("Enter your username: ");
+				String username = sc.nextLine();
+				System.out.println("Enter your password: ");
+				String password = sc.nextLine();
+				sendRegistrationRequest(username, password);
+			}
+		}
+	}
+	public void sendRegistrationRequest(String username, String password) throws IOException {
+		//send packet to the server; the server will update the username.
+		//1byte for the type (8), 4 bytes for the username length,
+		//then the username, 4bytes for the password length, then the password
+		ByteArrayOutputStream bos = new ByteArrayOutputStream();
+		DataOutputStream dos = new DataOutputStream(bos);
+		try {
+			dos.writeByte(8);
+			dos.writeInt(username.length());
+			dos.write(username.getBytes(StandardCharsets.UTF_8));
+			dos.writeInt(password.length());
+			dos.write(password.getBytes(StandardCharsets.UTF_8));
+			dos.flush();
+			sendPacket(0, bos.toByteArray());
+			System.out.println("registration packet sent to server");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 
 	public static void main(String[] args) throws UnknownHostException, IOException, InterruptedException {
 		ClientMsg c = new ClientMsg("localhost", 1666);
@@ -313,30 +327,55 @@ public class ClientMsg {
 		// add a connection listener that exit application when connection closed
 		c.addConnectionListener(active ->  {if (!active) System.exit(0);});
 
-		c.startSession();
 		Scanner sc = new Scanner(System.in);
+		c.startSession();
 
 		// AUTHENTIFICATION
-		String rep = "a" ;
+		String rep = "b" ;
+		c.isAuthenticated = false ;
 
-		//while the user is trying to authenticate, and is not authenticated
-		while (!rep.equalsIgnoreCase("N") && !c.isAuthenticated) {
-			System.out.println("Voulez vous vous connecter? Y/N");
+		while (!c.isAuthenticated && !rep.equalsIgnoreCase("R")) {
+			//ask to register or authenticate
+			System.out.println("Do you want to authenticate or register as a new member? (A/R)");
 			rep = sc.nextLine();
-			if (rep.equals("Y") || rep.equals("y")) { //the user is trying to authenticate
-				System.out.println("Entrez votre nom d'utilisateur : ");
+			if (rep.equalsIgnoreCase("A")) {
+				System.out.println("Enter your username: ");
 				String username = sc.nextLine();
-				System.out.println("Entrez votre mot de passe : ");
+				System.out.println("Enter your password: ");
 				String password = sc.nextLine();
 				c.sendLoginRequest(username, password);
-				System.out.println(c.getUsername());
-				if (c.isAuthenticated) {
-					c.setUsername(username);
-					break;
-				}
+			} else if (rep.equalsIgnoreCase("R")) {
+				System.out.println("Enter your username: ");
+				String username = sc.nextLine();
+				System.out.println("Enter your password: ");
+				String password = sc.nextLine();
+				c.sendRegistrationRequest(username, password);
+				c.setUsername(username);
+				c.setPassword(password);
+				c.isAuthenticated = true ;
 			}
 		}
-		//now, either the user is authenticated, or they chose not to authenticate
+
+
+		//while the user is trying to authenticate, and is not authenticated
+//		while (!rep.equalsIgnoreCase("N") && !c.isAuthenticated) {
+//			System.out.println("Voulez vous vous connecter? Y/N");
+//			rep = sc.nextLine();
+//			if (rep.equals("Y") || rep.equals("y")) { //the user is trying to authenticate
+//				System.out.println("Entrez votre nom d'utilisateur : ");
+//				String username = sc.nextLine();
+//				System.out.println("Entrez votre mot de passe : ");
+//				String password = sc.nextLine();
+//				c.sendLoginRequest(username, password);
+//				System.out.println(c.getUsername());
+//				if (c.isAuthenticated) {
+//					c.setUsername(username);
+//					break;
+//				}
+//			}
+//		}
+
+		//now, either the user registered, or the user is authenticated
 		System.out.println("Hello "+ c.getUsername() + "!");
 
 		String lu = null;
