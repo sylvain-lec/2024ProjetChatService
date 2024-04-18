@@ -339,26 +339,6 @@ public class ClientMsg {
 		//now, either the user is authenticated, or they chose not to authenticate
 		System.out.println("Hello "+ c.getUsername() + "!");
 
-
-
-//		while (!rep.equals("Y") && !rep.equals("N")) {
-//			System.out.println("Voulez vous vous connecter? Y/N");
-//			rep = sc.nextLine();
-//		}
-//		if (rep.equals("Y")) {
-//			System.out.println("Entrez votre nom d'utilisateur : ");
-//			String username = sc.nextLine();
-//			c.setUsername(username);
-//			System.out.println("Entrez votre mot de passe : ");
-//			String password = sc.nextLine();
-//			c.sendLoginRequest(username, password);
-//			System.out.println("Vous êtes " + c.getUsername());
-//
-//		}
-//		else {
-//			System.out.println("\nVous êtes : " + c.getUsername());
-//		}
-
 		String lu = null;
 		while (!"\\quit".equals(lu)) {
 			try {
