@@ -53,7 +53,7 @@ public class ServerMsg {
 		sp = new ServerPacketProcessor(this);
 		executor = Executors.newCachedThreadPool();
 	}
-	
+
 	public GroupMsg createGroup(int ownerId) {
 		UserMsg owner = users.get(ownerId);
 		if (owner==null) throw new ServerException("User with id="+ownerId+" unknown. Group creation failed.");
@@ -121,7 +121,7 @@ public class ServerMsg {
 	
 	// Methode utilisée pour savoir quoi faire d'un paquet
 	// reçu par le serveur
-	public void processPacket(Packet p) {
+	public void processPacket(Packet p) throws IOException {
 		PacketProcessor pp = null;
 		if (p.destId < 0) { //message de groupe
 			// can be send only if sender is member

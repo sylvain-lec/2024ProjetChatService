@@ -11,6 +11,9 @@
 
 package fr.uga.miashs.dciss.chatservice.server;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.logging.Logger;
@@ -26,8 +29,10 @@ public class ServerPacketProcessor implements PacketProcessor {
 	}
 
 	@Override
-	public void process(Packet p) {
+	public void process(Packet p) throws IOException {
+
 		LOG.info("PACKET RECU DANS process() de ServerPacketProcessor");
+
 
 		// ByteBufferVersion. On aurait pu utiliser un ByteArrayInputStream + DataInputStream à la place
 		ByteBuffer buf = ByteBuffer.wrap(p.data);
@@ -83,7 +88,7 @@ public class ServerPacketProcessor implements PacketProcessor {
 		}
 	}
 
-	public void createGroup(int ownerId, ByteBuffer data) {
+	public void createGroup(int ownerId, ByteBuffer data) throws IOException {
 		int nb = data.getInt();
 		GroupMsg g = server.createGroup(ownerId);
 		for (int i = 0; i < nb; i++) {
@@ -215,8 +220,6 @@ for (UserMsg u : g.getMembers()) {
 
 //	addMember(p.srcId, groupId, userId);
 	private void addMember(int srcId, int groupId, int userId) {
-		//int groupId = data.getInt();
-		//int userId = data.getInt();
 		GroupMsg group = server.getGroup(groupId);
 		if (group != null) {
 			UserMsg user = server.getUser(userId);

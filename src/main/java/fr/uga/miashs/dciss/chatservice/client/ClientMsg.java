@@ -15,11 +15,13 @@ import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import fr.uga.miashs.dciss.chatservice.common.Packet;
+import fr.uga.miashs.dciss.chatservice.server.ServerMsg;
 
 import javax.imageio.ImageIO;
 
@@ -248,17 +250,28 @@ public class ClientMsg {
 	private void receiveLoop() {
 		try {
 			while (s != null && !s.isClosed()) {
-
 				int sender = dis.readInt();
 				int dest = dis.readInt();
 				int length = dis.readInt();
 				byte[] data = new byte[length];
 				dis.readFully(data);
-				notifyMessageListeners(new Packet(sender, dest, data));
 
+				if (sender == ServerMsg.SERVER_CLIENTID && dest == this.identifier) {
+					ByteBuffer buffer = ByteBuffer.wrap(data);
+					// Suppose que le serveur envoie un byte pour définir le type de réponse.
+					byte responseType = buffer.get();
+
+					if (responseType == 1) { // Si le type de réponse est 1, cela signifie la création de groupe.
+						int groupId = buffer.getInt();
+						System.out.println("Le groupe numéro " + groupId + " a été créé.");
+					}
+				} else {
+					notifyMessageListeners(new Packet(sender, dest, data));
+				}
 			}
 		} catch (IOException e) {
-			// error, connection closed
+			// En cas d'erreur, fermer la connexion
+			e.printStackTrace();
 		}
 		closeSession();
 	}
@@ -278,6 +291,7 @@ public class ClientMsg {
 		ClientMsg c = new ClientMsg("localhost", 1666);
 
 		// add a dummy listener that print the content of message as a string
+
 		c.addMessageListener(p -> {
 			String username = c.getUsername();
 			System.out.println(username + " says to " + p.destId + ": " + new String(p.data));
