@@ -65,10 +65,10 @@ public class ServerPacketProcessor implements PacketProcessor {
 			//TRACE : print every userid and their username
 			LOG.info(server.getUsers());
 		}
-		else if (type == 6) { //cas login
-			//call method :
-			login(p.srcId, buf);
-		}
+//		else if (type == 6) { //cas login
+//			//call method :
+//			login(p.srcId, buf);
+//		}
 		else if (type == 7) { //update password
 			int userId = p.srcId; //id du user
 			int length = buf.getInt(); //on recupere la longueur du password
@@ -92,26 +92,26 @@ public class ServerPacketProcessor implements PacketProcessor {
 
 		}
 
-		else if (type == 8) { //REGISTER CASE
-			int userId = p.srcId; //id du user
-			int usernameLength = buf.getInt(); //on recupere la longueur du username
-			byte[] usernameBytes = new byte[usernameLength]; //on recupere le username
-			buf.get(usernameBytes);
-			String username = new String(usernameBytes, StandardCharsets.UTF_8);
+//		else if (type == 10) { //REGISTER CASE
+//			int userId = p.srcId; //id du user
+//			int usernameLength = buf.getInt(); //on recupere la longueur du username
+//			byte[] usernameBytes = new byte[usernameLength]; //on recupere le username
+//			buf.get(usernameBytes);
+//			String username = new String(usernameBytes, StandardCharsets.UTF_8);
+//
+//			int passwordLength = buf.getInt(); //on recupere la longueur du password
+//			byte[] passwordBytes = new byte[passwordLength]; //on recupere le password
+//			buf.get(passwordBytes);
+//			String password = new String(passwordBytes, StandardCharsets.UTF_8);
+//
+//			//on met à jour le password côté serveur (setPassword() de la classe UserMsg)
+//			server.getUser(userId).setPassword(password);
+//			server.getUser(userId).setUsername(username);
+//
+//			LOG.info("userId " + userId + " created an account. Password : " + password);
+//		}
 
-			int passwordLength = buf.getInt(); //on recupere la longueur du password
-			byte[] passwordBytes = new byte[passwordLength]; //on recupere le password
-			buf.get(passwordBytes);
-			String password = new String(passwordBytes, StandardCharsets.UTF_8);
-
-			//on met à jour le password côté serveur (setPassword() de la classe UserMsg)
-			server.getUser(userId).setPassword(password);
-			server.getUser(userId).setUsername(username);
-
-			LOG.info("userId " + userId + " created an account. Password : " + password);
-		}
-
-		else if (type == 9) { //CASE INFORMATION RETRIEVAL
+		else if (type == 11) { //CASE INFORMATION RETRIEVAL
 			LOG.info("packet recieved for info retrieval");
 			int userId = p.srcId; //id du user
 			String username = server.getUser(userId).getUsername(); //on récupère le username
@@ -312,6 +312,7 @@ for (UserMsg u : g.getMembers()) {
 					Packet reponse = new Packet(0, u.getId(), data);
 					u.process(reponse);
 				}
+				LOG.info("trying to send a packet to notify members of the group");
 			} else {
 				LOG.warning("Attempt to add non-existent user " + userId + " to group " + groupId);
 			}
@@ -355,55 +356,55 @@ for (UserMsg u : g.getMembers()) {
 
 	}
 
-	private void login(int userId, ByteBuffer buf) {
-		LOG.info("on est dans login()");
-		int usernameLength = buf.getInt();
-		byte[] usernameBytes = new byte[usernameLength];
-		buf.get(usernameBytes);
-		String username = new String(usernameBytes, StandardCharsets.UTF_8);
-
-		int passwordLength = buf.getInt();
-		byte[] passwordBytes = new byte[passwordLength];
-		buf.get(passwordBytes);
-		String password = new String(passwordBytes, StandardCharsets.UTF_8);
-
-		// Authenticate the user
-		int userIdTentative = server.authenticateUser(username, password);
-		//AUTHENTICATION SUCCEEDED
-		if (userIdTentative != 0) {
-			LOG.info("from ServerPacketProcessor, login() : User " + username + " authenticated successfully");
-
-			// Send a message to the user to confirm the authentication
-			//AND SEND THEM THEIR USERID
-			byte confirmationCode = 10; // 10 is the confirmation code for successful authentication
-			//get userId associated with this username and password
-
-			ByteBuffer buffer = ByteBuffer.allocate(1 + 4 );
-			buffer.put(confirmationCode);
-			buffer.putInt(userIdTentative);
-			byte[] data = buffer.array();
-			Packet reponse = new Packet(0, userId, data);
-			server.getUser(userId).process(reponse); //getUser() in ServerMsg
-			LOG.info("old user id found : " + userIdTentative);
-
-
-			//AUTHENTICATION FAILED
-		} else { //authenticateUser returned 0, which means the userId wasn't found
-			LOG.info("\nfrom ServerPacketProcessor, login() : Authentication failed for user " + username);
-
-			// Send a message to the user to inform that the authentication failed
-			//MESSAGE INUTILE
-			String msg = "\nfrom ServerPacketProcessor, login() : Authentication failed";
-			byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8);
-			int length = msg.getBytes().length;
-			byte confirmationCode = 11; // 11 is the code for authentication failure
-			ByteBuffer buffer = ByteBuffer.allocate(1 + 4 + length);
-			buffer.put(confirmationCode);
-			buffer.putInt(length);
-			buffer.put(msgBytes);
-			byte[] data = buffer.array();
-			Packet reponse = new Packet(0, userId, data);
-			server.getUser(userId).process(reponse);
-		}
-	}
+//	private void login(int userId, ByteBuffer buf) {
+//		LOG.info("on est dans login()");
+//		int usernameLength = buf.getInt();
+//		byte[] usernameBytes = new byte[usernameLength];
+//		buf.get(usernameBytes);
+//		String username = new String(usernameBytes, StandardCharsets.UTF_8);
+//
+//		int passwordLength = buf.getInt();
+//		byte[] passwordBytes = new byte[passwordLength];
+//		buf.get(passwordBytes);
+//		String password = new String(passwordBytes, StandardCharsets.UTF_8);
+//
+//		// Authenticate the user
+//		int userIdTentative = server.authenticateUser(username, password);
+//		//AUTHENTICATION SUCCEEDED
+//		if (userIdTentative != 0) {
+//			LOG.info("from ServerPacketProcessor, login() : User " + username + " authenticated successfully");
+//
+//			// Send a message to the user to confirm the authentication
+//			//AND SEND THEM THEIR USERID
+//			byte confirmationCode = 10; // 10 is the confirmation code for successful authentication
+//			//get userId associated with this username and password
+//
+//			ByteBuffer buffer = ByteBuffer.allocate(1 + 4 );
+//			buffer.put(confirmationCode);
+//			buffer.putInt(userIdTentative);
+//			byte[] data = buffer.array();
+//			Packet reponse = new Packet(0, userId, data);
+//			server.getUser(userId).process(reponse); //getUser() in ServerMsg
+//			LOG.info("old user id found : " + userIdTentative);
+//
+//
+//			//AUTHENTICATION FAILED
+//		} else { //authenticateUser returned 0, which means the userId wasn't found
+//			LOG.info("\nfrom ServerPacketProcessor, login() : Authentication failed for user " + username);
+//
+//			// Send a message to the user to inform that the authentication failed
+//			//MESSAGE INUTILE
+//			String msg = "\nfrom ServerPacketProcessor, login() : Authentication failed";
+//			byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8);
+//			int length = msg.getBytes().length;
+//			byte confirmationCode = 11; // 11 is the code for authentication failure
+//			ByteBuffer buffer = ByteBuffer.allocate(1 + 4 + length);
+//			buffer.put(confirmationCode);
+//			buffer.putInt(length);
+//			buffer.put(msgBytes);
+//			byte[] data = buffer.array();
+//			Packet reponse = new Packet(0, userId, data);
+//			server.getUser(userId).process(reponse);
+//		}
+//	}
 }
