@@ -368,9 +368,10 @@ public class ClientMsg {
 				if (code == 0) { //envoyer un msg
 					System.out.println("\nA qui voulez vous écrire ? ");
 					int dest = Integer.parseInt(sc.nextLine());
-					System.out.println("\n Voulez-vous envoyer une image? \n0 : oui\n1 : non)
-					int code = Integer.parseInt(sc.nextLine());
-					if (code == 0) { // Send an image
+
+					System.out.println("\n Voulez-vous envoyer une image? \n0 : oui\n1 : non");
+					int codeI = Integer.parseInt(sc.nextLine());
+					if (codeI == 0) { // Send an image
 						ByteArrayOutputStream bos = new ByteArrayOutputStream();
 						DataOutputStream dos = new DataOutputStream(bos);
 
