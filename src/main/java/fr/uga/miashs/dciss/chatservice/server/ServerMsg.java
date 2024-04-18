@@ -84,18 +84,6 @@ public class ServerMsg {
 		return users.get(userId);
 	}
 
-	/**
-	 * Get the username of a user by its id
-	 * @param userId
-	 * @return username
-	 */
-	public String getUsernameByUserId(int userId) {
-		UserMsg user = users.get(userId);
-		if (user != null) {
-			return user.getUsername();
-		}
-		return null; // or throw an exception
-	}
 
 	/**
 	 * get all users, with their id, username and password
@@ -113,15 +101,15 @@ public class ServerMsg {
 		return groups.get(groupId);
 	}
 
-	public int authenticateUser(String username, String password) {
-		//get user associated with this username
-		UserMsg user = users.values().stream().filter(u -> u.getUsername().equals(username)).findFirst().orElse(null);
-		String realPassword = user.getPassword(); //get user's password
-		if (user != null && realPassword.equals(password)) {//compare to given password
-			return user.getId();
-		}
-		return 0;
-	}
+//	public int authenticateUser(String username, String password) {
+//		//get user associated with this username
+//		UserMsg user = users.values().stream().filter(u -> u.getUsername().equals(username)).findFirst().orElse(null);
+//		String realPassword = user.getPassword(); //get user's password
+//		if (user != null && realPassword.equals(password)) {//compare to given password
+//			return user.getId();
+//		}
+//		return 0;
+//	}
 
 	
 	// Methode utilisée pour savoir quoi faire d'un paquet

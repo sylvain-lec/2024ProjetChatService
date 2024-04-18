@@ -255,27 +255,31 @@ public class ClientMsg {
 						System.out.println(msg);
 					}
 
-					else if (responseType == 9) {
-						//the packet contains an int for length and the username
+					else if (responseType == 9) { //info retrieval upon authentication
 						int usernameLength = buffer.getInt();
 						byte[] usernameBytes = new byte[usernameLength];
 						buffer.get(usernameBytes);
 						String username = new String(usernameBytes, StandardCharsets.UTF_8); //retrieve the username
 						this.username = username; //set the username
-					}
-					else if (responseType == 10) { //authentication successful
-						System.out.println("You've been successfully authenticated. Type anything to continue.");
-						//set userId to the userId received in the packet
-						int newUserId = buffer.getInt();
-	/* SET HERE	*/		this.identifier = newUserId;
-						System.out.println("new id : "+ this.getIdentifier());
-						isAuthenticated = true ;
 
-						}
-						else if (responseType == 11) {
-							System.out.println("Authentication failed. Please try again.");
-							isAuthenticated = false ;
-						}
+						int passwordLength = buffer.getInt();
+						byte[] passwordBytes = new byte[passwordLength];
+						buffer.get(passwordBytes);
+						String password = new String(passwordBytes, StandardCharsets.UTF_8); //retrieve the password
+						this.password = password; //set the password
+					}
+//					else if (responseType == 10) { //authentication successful
+//						System.out.println("You've been successfully authenticated. Type anything to continue.");
+//						//set userId to the userId received in the packet
+//						int newUserId = buffer.getInt();
+//	/* SET HERE	*/		this.identifier = newUserId;
+//						System.out.println("new id : "+ this.getIdentifier());
+//						isAuthenticated = true ;
+//					}
+//					else if (responseType == 11) {
+//						System.out.println("Authentication failed. Please try again.");
+//						isAuthenticated = false ;
+//					}
 
 					} else {
 						notifyMessageListeners(new Packet(sender, dest, data));
@@ -342,7 +346,7 @@ public class ClientMsg {
 				c.startSession(password);
 				System.out.println("Enter your username: ");
 				String username = sc.nextLine();
-				c.username = username;
+				c.setUsername(username);
 				c.password = password;
 
 				System.out.println("you are now registered as " + c.getUsername() + " with id " + c.getIdentifier());
@@ -350,8 +354,8 @@ public class ClientMsg {
 			}
 		}
 
-		//wait for 1s
-		Thread.sleep(1000);
+		//wait for 0.5s
+		Thread.sleep(500);
 		//now, either the user registered, or the user is authenticated
 		System.out.println("Hello "+ c.getUsername() + "!");
 
@@ -604,7 +608,6 @@ public class ClientMsg {
 			dos.writeInt(this.getIdentifier());
 			dos.flush();
 			sendPacket(0, bos.toByteArray());
-			System.out.println("packet sent from askInfos");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

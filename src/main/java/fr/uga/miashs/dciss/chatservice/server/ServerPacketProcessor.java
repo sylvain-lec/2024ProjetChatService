@@ -57,8 +57,8 @@ public class ServerPacketProcessor implements PacketProcessor {
 
 		else if (type == 7) { //update password
 			updatePassword(p, buf);
-
 		}
+
 		else if (type == 8) { //addContact
 			int userId = p.srcId; // récuperer Id user
 			int contactId = buf.getInt(); // id contact
@@ -72,7 +72,7 @@ public class ServerPacketProcessor implements PacketProcessor {
 		}
 
 		else if (type == 11) { //CASE INFORMATION RETRIEVAL
-			sendUsername(p, buf);
+			sendInfos(p, buf);
 		}
 
 
@@ -84,26 +84,40 @@ public class ServerPacketProcessor implements PacketProcessor {
 		}
 	}
 
-	private void sendUsername(Packet p, ByteBuffer buf) {
-		LOG.info("packet recieved for info retrieval");
+	/**
+	 * Sends the username of the user to the client when asked to. used by the client to get back its username after login
+	 * @param p
+	 * @param buf
+	 */
+	private void sendInfos(Packet p, ByteBuffer buf) {
 		int userId = p.srcId; //id du user
 		String username = server.getUser(userId).getUsername(); //on récupère le username
+		byte[] usernameBytes = username.getBytes(StandardCharsets.UTF_8);
+		int lengthU = username.getBytes().length; //longueur du username
 
-		//on envoie le username
-		byte[] usernameBytes = username.getBytes(StandardCharsets.UTF_8); //msg à envoyer, converti en bytes
-		int length = username.getBytes().length; //longueur du msg à envoyer
+		String password = server.getUser(userId).getPassword(); //on récupère le password
+		byte[] passwordBytes = password.getBytes(StandardCharsets.UTF_8);
+		int lengthP = password.getBytes().length; //longueur du password
 
 		// Create a byte buffer with 4 extra bytes for the length
-		ByteBuffer buffer = ByteBuffer.allocate(1 + 4 + length);
+		ByteBuffer buffer = ByteBuffer.allocate(1 + 4 + lengthU + 4 + lengthP);
 		buffer.put((byte) 9);
-		buffer.putInt(length);
+		buffer.putInt(lengthU);
 		buffer.put(usernameBytes);
+		buffer.putInt(lengthP);
+		buffer.put(passwordBytes);
+
 		// nv tableau qui concatène la longueur du msg et le msg lui-même
 		byte[] data = buffer.array();
 		Packet reponse = new Packet(0, userId, data); //on forme le packet
 		server.getUser(userId).process(reponse); //on l'envoie
 	}
 
+	/**
+	 * Reads the new password from the packet and updates the user's password
+	 * @param p
+	 * @param buf
+	 */
 	private void updatePassword(Packet p, ByteBuffer buf) {
 		int userId = p.srcId; //id du user
 		int length = buf.getInt(); //on recupere la longueur du password
@@ -116,6 +130,11 @@ public class ServerPacketProcessor implements PacketProcessor {
 		LOG.info("userId " + userId + " updated their password to : " + password);
 	}
 
+	/**
+	 * Reads the new username from the packet and updates the user's username
+	 * @param p
+	 * @param buf
+	 */
 	private void updateUsername(Packet p, ByteBuffer buf) {
 		int userId = p.srcId;
 		int length = buf.getInt();
@@ -126,7 +145,6 @@ public class ServerPacketProcessor implements PacketProcessor {
 		//on met à jour le username côté serveur (setUsername() de la classe UserMsg)
 		server.getUser(userId).setUsername(username);
 		LOG.info("userId " + userId + " a mis à jour son username en " + username);
-
 		//TRACE : print every userid and their username
 		LOG.info(server.getUsers());
 	}
