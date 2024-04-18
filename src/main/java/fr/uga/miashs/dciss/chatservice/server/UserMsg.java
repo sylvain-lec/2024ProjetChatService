@@ -26,7 +26,7 @@ public class UserMsg implements PacketProcessor{
 	private String username;
 	private String password;
 
-	private Map<String, UserMsg> contacts;
+	private Map<Integer, String> contacts;
 	private Set<GroupMsg> groups;
 	
 	private ServerMsg server;
@@ -185,7 +185,7 @@ public boolean isConnected() {
 
 	;
 	void addContact(int contactId, String contactName) {
-		contacts.put(contactName, server.getUser(contactId));
+		contacts.put(contactId, contactName);
 		LOG.info("Contact added successfully for user with ID: " + userId + ", contact ID: " + contactId + ", contact Name: " + contactName);
 	}
 
