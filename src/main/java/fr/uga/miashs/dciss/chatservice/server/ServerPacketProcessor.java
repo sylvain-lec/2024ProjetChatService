@@ -313,6 +313,7 @@ for (UserMsg u : g.getMembers()) {
 	}
 
 	private void login(int userId, ByteBuffer buf) {
+
 		int usernameLength = buf.getInt();
 		byte[] usernameBytes = new byte[usernameLength];
 		buf.get(usernameBytes);

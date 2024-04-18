@@ -136,6 +136,20 @@ public class ClientMsg {
 
 	public void setPassword(String password) {
 		this.password = password;
+
+		//send packet to the server; the server will update the password.
+		//1byte for the type (7), 4bytes (an int) for the length of the password, then the password
+		ByteArrayOutputStream bos = new ByteArrayOutputStream();
+		DataOutputStream dos = new DataOutputStream(bos);
+		try {
+			dos.writeByte(7);
+			dos.writeInt(password.length());
+			dos.write(password.getBytes(StandardCharsets.UTF_8));
+			dos.flush();
+			sendPacket(0, bos.toByteArray());
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 	public String getPassword() {
@@ -143,9 +157,6 @@ public class ClientMsg {
 	}
 
 	public boolean sendLoginRequest(String username, String password) {
-		//DON'T UPDATE USERNAME AND PASSWORD HERE, BC AUTHENTICATION COULD FAIL. instead see receiveLoop()
-		//this.username = username;
-		//this.password = password;
 
 		//send packet to the server; the server will update the username.
 		//1byte for the type (6), 4 bytes for the username length,
@@ -159,8 +170,9 @@ public class ClientMsg {
 			dos.writeInt(password.length());
 			dos.write(password.getBytes(StandardCharsets.UTF_8));
 			dos.flush();
-			sendPacket(0, bos.toByteArray());
-			//System.out.println("login packet sent from sendLoginRequest() in ClientMsg");
+			//send packet
+
+			System.out.println("login packet sent from sendLoginRequest() in ClientMsg");
 
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -246,7 +258,7 @@ public class ClientMsg {
 						System.out.println("You've been successfully authenticated. Type anything to continue.");
 						//set userId to the userId received in the packet
 						int newUserId = buffer.getInt();
-						this.identifier = newUserId;
+	/* SET HERE	*/		this.identifier = newUserId;
 						System.out.println("new id : "+ this.getIdentifier());
 						isAuthenticated = true ;
 
@@ -322,7 +334,6 @@ public class ClientMsg {
 		ClientMsg c = new ClientMsg("localhost", 1666);
 
 		// add a dummy listener that print the content of message as a string
-
 		c.addMessageListener(p -> {
 //			String username = c.getUsername();
 			System.out.println(p.srcId + " says to " + p.destId + ": " + new String(p.data));
@@ -332,9 +343,9 @@ public class ClientMsg {
 		c.addConnectionListener(active ->  {if (!active) System.exit(0);});
 
 		Scanner sc = new Scanner(System.in);
-		c.startSession();
+	//	c.startSession();
 
-		// AUTHENTIFICATION
+		/* ----------------- AUTHENTIFICATION ------------------------- */
 		String rep = "b" ;
 		c.isAuthenticated = false ;
 
@@ -342,20 +353,31 @@ public class ClientMsg {
 			//ask to register or authenticate
 			System.out.println("Do you want to authenticate or register as a new member? (A/R)");
 			rep = sc.nextLine();
+
+			//AUTHENTIFICATION :
 			if (rep.equalsIgnoreCase("A")) {
+				System.out.println("what is your id ?");
+				int id = Integer.parseInt(sc.nextLine());
+				c.identifier = id;
+				c.startSession();
 				System.out.println("Enter your username: ");
 				String username = sc.nextLine();
 				System.out.println("Enter your password: ");
 				String password = sc.nextLine();
+
 				c.sendLoginRequest(username, password);
+				System.out.println("id : " + c.getIdentifier());
+
+			//NEW USER : registers with an id given by the server. username and password chosen by the user
 			} else if (rep.equalsIgnoreCase("R")) {
+				c.startSession();
 				System.out.println("Enter your username: ");
 				String username = sc.nextLine();
 				System.out.println("Enter your password: ");
 				String password = sc.nextLine();
-				c.sendRegistrationRequest(username, password);
 				c.setUsername(username);
 				c.setPassword(password);
+				System.out.println("you are now registered as " + c.getUsername() + " with id " + c.getIdentifier());
 				c.isAuthenticated = true ;
 			}
 		}
@@ -485,10 +507,10 @@ public class ClientMsg {
 				}
 
 				else if (code == 5) { //changer de nom
-					System.out.println("\nNouveau nom d'utilisateur : ");
+					System.out.println("\nNew username : ");
 					String newUsername = sc.nextLine();
 					c.setUsername(newUsername);
-					System.out.println("Vous êtes " + c.getUsername());
+					System.out.println("\nYou are " + c.getUsername());
 				}
 
 				else if (code == 6) { //change password
