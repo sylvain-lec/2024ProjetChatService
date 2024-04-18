@@ -380,7 +380,9 @@ public class ClientMsg {
 				}
 
 				else if (code == 2) { //supprimer un groupe
-					c.supprimerGroupe();
+					System.out.println("quel groupe ?");
+					int gp = Integer.parseInt(sc.nextLine());
+					c.supprimerGroupe(gp);
 				}
 
 				else if (code == 3) { //ajouter un member à un groupe
@@ -531,19 +533,15 @@ public class ClientMsg {
 
 	/**
 	 * Delete a group on the server
-
 	 */
-	private void supprimerGroupe() {
+	private void supprimerGroupe(int idGroup) {
 		try {
-			Scanner sc = new Scanner(System.in);
 			ByteArrayOutputStream bos = new ByteArrayOutputStream();
-			DataOutputStream dos = new DataOutputStream(bos);
 
 			// byte 2 : delete group on server
 			dos.writeByte(2);
 			// id group
-			System.out.println("quel groupe ?");
-			dos.writeInt(Integer.parseInt(sc.nextLine()));
+			dos.writeInt(idGroup);
 			dos.flush();
 			this.sendPacket(0, bos.toByteArray());
 		} catch (IOException e) {
@@ -562,7 +560,6 @@ public class ClientMsg {
 		// byte 1 : create group on server
 		try {
 			dos.writeByte(1);
-
 
 		//empty int list
 		List<Integer> members = new ArrayList<>();
