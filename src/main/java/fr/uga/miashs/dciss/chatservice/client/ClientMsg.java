@@ -259,27 +259,34 @@ public class ClientMsg {
 				byte[] data = new byte[length];
 				dis.readFully(data);
 
-				if (sender == ServerMsg.SERVER_CLIENTID && dest == this.identifier) {
-					ByteBuffer buffer = ByteBuffer.wrap(data);
-					// Suppose que le serveur envoie un byte pour définir le type de réponse.
-					byte responseType = buffer.get();
-
-					if (responseType == 1) { // Si le type de réponse est 1, cela signifie la création de groupe.
-						int groupId = buffer.getInt();
-						System.out.println("Le groupe numéro " + groupId + " a été créé.");
-					}
-					else if (responseType == 10) { //authentication successful
-						System.out.println("You've been successfully authenticated. Type anything to continue.");
-						isAuthenticated = true ;
-
-					}
-					else if (responseType == 11) {
-						System.out.println("Authentication failed. Please try again.");
-						isAuthenticated = false ;
-					}
-
+				Packet packet = new Packet(sender, dest, data); // Create a packet to receive an image if there is one
+				BufferedImage image = packet.getImage(); // Get the image from the packet
+				if (image != null) {
+					// TODO: The packet contains an image, send it to the listeners
+					notifyMessageListeners(new Packet(sender, dest, data, image));
 				} else {
-					notifyMessageListeners(new Packet(sender, dest, data));
+					if (sender == ServerMsg.SERVER_CLIENTID && dest == this.identifier) {
+						ByteBuffer buffer = ByteBuffer.wrap(data);
+						// Suppose que le serveur envoie un byte pour définir le type de réponse.
+						byte responseType = buffer.get();
+
+						if (responseType == 1) { // Si le type de réponse est 1, cela signifie la création de groupe.
+							int groupId = buffer.getInt();
+							System.out.println("Le groupe numéro " + groupId + " a été créé.");
+						}
+						else if (responseType == 10) { //authentication successful
+							System.out.println("You've been successfully authenticated. Type anything to continue.");
+							isAuthenticated = true ;
+
+						}
+						else if (responseType == 11) {
+							System.out.println("Authentication failed. Please try again.");
+							isAuthenticated = false ;
+						}
+
+					} else {
+						notifyMessageListeners(new Packet(sender, dest, data));
+					}
 				}
 			}
 		} catch (IOException e) {
@@ -362,11 +369,7 @@ public class ClientMsg {
 		String lu = null;
 		while (!"\\quit".equals(lu)) {
 			try {
-<<<<<<< HEAD
-				System.out.println("\n" + c.getUsername()+ ", que souhaitez-vous faire? \n0 : envoyer un message\n1 : créer un groupe\n2 : supprimer un groupe\n3 : ajouter un membre à un groupe\n4 : supprimer un membre d'un groupe\n5 : changer de nom\n7 : changer de mot de passe\n8 : Ajouter un contact\n");
-=======
-				System.out.println("\n" + c.getUsername()+ ", que souhaitez-vous faire? \n0 : envoyer un message\n1 : créer un groupe\n2 : supprimer un groupe\n3 : ajouter un membre à un groupe\n4 : supprimer un membre d'un groupe\n5 : changer de nom\n6 : changer de mot de passe\n");
->>>>>>> c19fc8e43825ef06c582763d15ff1608f02c5e72
+				System.out.println("\n" + c.getUsername()+ ", que souhaitez-vous faire? \n0 : envoyer un message\n1 : créer un groupe\n2 : supprimer un groupe\n3 : ajouter un membre à un groupe\n4 : supprimer un membre d'un groupe\n5 : changer de nom\n7 : changer de mot de passe\n8 : Ajouter un contact\\n\")");
 				int code = Integer.parseInt(sc.nextLine());
 
 				if (code == 0) { //envoyer un msg
@@ -383,8 +386,8 @@ public class ClientMsg {
 						System.out.println("Adresse de l'image - format jpg:");
 						String imagePath = sc.nextLine();
 						BufferedImage image = ImageIO.read(new File(imagePath));
-						Packet packet = new Packet(c.getIdentifier(), 0, bos.toByteArray(), image);
-						c.sendPacket(0, packet.toByteArray());
+						Packet packet = new Packet(c.getIdentifier(), dest, bos.toByteArray(), image);
+						c.sendPacket(dest, packet.toByteArray());
 					}
 					System.out.println("\nVotre message ? ");
 					lu = sc.nextLine();
@@ -472,7 +475,7 @@ public class ClientMsg {
 					System.out.println("Vous êtes " + c.getUsername());
 				}
 
-				else if (code == 6) { //change password
+				else if (code == 7) { //change password
 					System.out.println("\nSaisissez votre ancien mot de passe : ");
 					String oldPassword = sc.nextLine();
 					//get password associated with the username, without using the server
