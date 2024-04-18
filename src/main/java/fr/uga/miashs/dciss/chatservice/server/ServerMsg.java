@@ -113,9 +113,14 @@ public class ServerMsg {
 		return groups.get(groupId);
 	}
 
-	public boolean authenticateUser(int userId, String password) {
-		UserMsg user = users.get(userId);
-		return user != null && user.checkPassword(password);
+	public int authenticateUser(String username, String password) {
+		//get user associated with this username
+		UserMsg user = users.values().stream().filter(u -> u.getUsername().equals(username)).findFirst().orElse(null);
+		String realPassword = user.getPassword(); //get user's password
+		if (user != null && realPassword.equals(password)) {//compare to given password
+			return user.getId();
+		}
+		return 0;
 	}
 
 	

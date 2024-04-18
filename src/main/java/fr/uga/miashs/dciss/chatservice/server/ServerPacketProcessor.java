@@ -324,26 +324,31 @@ for (UserMsg u : g.getMembers()) {
 		String password = new String(passwordBytes, StandardCharsets.UTF_8);
 
 		// Authenticate the user
-		boolean authenticated = server.authenticateUser(userId, password);
-		if (authenticated) {
+		int userIdTentative = server.authenticateUser(username, password);
+		//AUTHENTICATION SUCCEEDED
+		if (userIdTentative != 0) {
 			LOG.info("from ServerPacketProcessor, login() : User " + username + " authenticated successfully");
 
 			// Send a message to the user to confirm the authentication
-			String msg = "from ServerPacketProcessor, login() : authenticated successfully";
-			byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8);
-			int length = msg.getBytes().length;
+			//AND SEND THEM THEIR USERID
 			byte confirmationCode = 10; // 10 is the confirmation code for successful authentication
-			ByteBuffer buffer = ByteBuffer.allocate(1 + 4 + length);
+			//get userId associated with this username and password
+
+			ByteBuffer buffer = ByteBuffer.allocate(1 + 4 );
 			buffer.put(confirmationCode);
-			buffer.putInt(length);
-			buffer.put(msgBytes);
+			buffer.putInt(userIdTentative);
 			byte[] data = buffer.array();
 			Packet reponse = new Packet(0, userId, data);
 			server.getUser(userId).process(reponse); //getUser() in ServerMsg
-		} else {
+			LOG.info("old user id found : " + userIdTentative);
+
+
+			//AUTHENTICATION FAILED
+		} else { //authenticateUser returned 0, which means the userId wasn't found
 			LOG.info("\nfrom ServerPacketProcessor, login() : Authentication failed for user " + username);
 
 			// Send a message to the user to inform that the authentication failed
+			//MESSAGE INUTILE
 			String msg = "\nfrom ServerPacketProcessor, login() : Authentication failed";
 			byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8);
 			int length = msg.getBytes().length;

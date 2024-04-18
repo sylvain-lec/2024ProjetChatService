@@ -244,6 +244,10 @@ public class ClientMsg {
 					}
 					else if (responseType == 10) { //authentication successful
 						System.out.println("You've been successfully authenticated. Type anything to continue.");
+						//set userId to the userId received in the packet
+						int newUserId = buffer.getInt();
+						this.identifier = newUserId;
+						System.out.println("new id : "+ this.getIdentifier());
 						isAuthenticated = true ;
 
 					}
