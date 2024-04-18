@@ -12,15 +12,13 @@
 package fr.uga.miashs.dciss.chatservice.common;
 
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import javax.imageio.ImageIO;
 
 /*
  * Data structure to represent a packet
  */
-public class Packet {
+public class Packet implements Serializable {
 
 	public final int srcId;
 	public final int destId;
@@ -46,12 +44,21 @@ public class Packet {
 		this.imageData = baos.toByteArray();
 	}
 
-	// 	Method to convert the packet to a byte array (needed for ClientMsg)
+	// 	Method to convert the packet to a byte array (needed to send an image)
 	public byte[] toByteArray() throws IOException {
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		ObjectOutputStream oos = new ObjectOutputStream(baos);
 		oos.writeObject(this);
 		return baos.toByteArray();
+	}
+
+	// 	Method to convert a byte array to a packet (needed to receive an image)
+	public BufferedImage getImage() throws IOException {
+		if (imageData == null) {
+			return null;
+		}
+		ByteArrayInputStream bais = new ByteArrayInputStream(imageData);
+		return ImageIO.read(bais);
 	}
 
 	public byte getType() {
