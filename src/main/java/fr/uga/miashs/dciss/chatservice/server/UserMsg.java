@@ -168,7 +168,7 @@ public boolean isConnected() {
 		} catch (InterruptedException e) {
 			throw new ServerException("Sending loop thread of "+userId+" has been interrupted.",e);
 		}
-		close();
+		//close();
 	}
 	
 	/**
