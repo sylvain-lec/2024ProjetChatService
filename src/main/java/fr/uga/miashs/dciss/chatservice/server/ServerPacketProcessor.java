@@ -324,9 +324,9 @@ for (UserMsg u : g.getMembers()) {
 			String msg = "from ServerPacketProcessor, login() : authenticated successfully";
 			byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8);
 			int length = msg.getBytes().length;
-			int confirmationCode = 0;
-			ByteBuffer buffer = ByteBuffer.allocate(4 + 4 + length);
-			buffer.putInt(confirmationCode);
+			byte confirmationCode = 10; // 10 is the confirmation code for successful authentication
+			ByteBuffer buffer = ByteBuffer.allocate(1 + 4 + length);
+			buffer.put(confirmationCode);
 			buffer.putInt(length);
 			buffer.put(msgBytes);
 			byte[] data = buffer.array();
@@ -339,8 +339,9 @@ for (UserMsg u : g.getMembers()) {
 			String msg = "\nfrom ServerPacketProcessor, login() : Authentication failed";
 			byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8);
 			int length = msg.getBytes().length;
-			ByteBuffer buffer = ByteBuffer.allocate(4 + 4 + length);
-			buffer.putInt(1);
+			byte confirmationCode = 11; // 11 is the code for authentication failure
+			ByteBuffer buffer = ByteBuffer.allocate(1 + 4 + length);
+			buffer.put(confirmationCode);
 			buffer.putInt(length);
 			buffer.put(msgBytes);
 			byte[] data = buffer.array();

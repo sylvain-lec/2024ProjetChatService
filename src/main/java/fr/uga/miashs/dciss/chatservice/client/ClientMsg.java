@@ -362,15 +362,34 @@ public class ClientMsg {
 		String lu = null;
 		while (!"\\quit".equals(lu)) {
 			try {
+<<<<<<< HEAD
 				System.out.println("\n" + c.getUsername()+ ", que souhaitez-vous faire? \n0 : envoyer un message\n1 : créer un groupe\n2 : supprimer un groupe\n3 : ajouter un membre à un groupe\n4 : supprimer un membre d'un groupe\n5 : changer de nom\n7 : changer de mot de passe\n8 : Ajouter un contact\n");
+=======
+				System.out.println("\n" + c.getUsername()+ ", que souhaitez-vous faire? \n0 : envoyer un message\n1 : créer un groupe\n2 : supprimer un groupe\n3 : ajouter un membre à un groupe\n4 : supprimer un membre d'un groupe\n5 : changer de nom\n6 : changer de mot de passe\n");
+>>>>>>> c19fc8e43825ef06c582763d15ff1608f02c5e72
 				int code = Integer.parseInt(sc.nextLine());
 
 				if (code == 0) { //envoyer un msg
 					System.out.println("\nA qui voulez vous écrire ? ");
 					int dest = Integer.parseInt(sc.nextLine());
+
+					System.out.println("\n Voulez-vous envoyer une image? \n0 : oui\n1 : non");
+					int codeI = Integer.parseInt(sc.nextLine());
+					if (codeI == 0) { // Send an image
+						ByteArrayOutputStream bos = new ByteArrayOutputStream();
+						DataOutputStream dos = new DataOutputStream(bos);
+
+						dos.writeByte(6);
+						System.out.println("Adresse de l'image - format jpg:");
+						String imagePath = sc.nextLine();
+						BufferedImage image = ImageIO.read(new File(imagePath));
+						Packet packet = new Packet(c.getIdentifier(), 0, bos.toByteArray(), image);
+						c.sendPacket(0, packet.toByteArray());
+					}
 					System.out.println("\nVotre message ? ");
 					lu = sc.nextLine();
 					c.sendPacket(dest, lu.getBytes());
+
 				}
 
 				else if (code == 1) { //creer un groupe
@@ -453,18 +472,7 @@ public class ClientMsg {
 					System.out.println("Vous êtes " + c.getUsername());
 				}
 
-				else if (code == 6) { // Send an image
-					ByteArrayOutputStream bos = new ByteArrayOutputStream();
-					DataOutputStream dos = new DataOutputStream(bos);
-
-					dos.writeByte(6);
-					System.out.println("Adresse de l'image - format jpg:");
-					String imagePath = sc.nextLine();
-					BufferedImage image = ImageIO.read(new File(imagePath));
-					Packet packet = new Packet(c.getIdentifier(), 0, bos.toByteArray(), image);
-					c.sendPacket(0, packet.toByteArray());
-				}
-				else if (code == 7) { //change password
+				else if (code == 6) { //change password
 					System.out.println("\nSaisissez votre ancien mot de passe : ");
 					String oldPassword = sc.nextLine();
 					//get password associated with the username, without using the server
