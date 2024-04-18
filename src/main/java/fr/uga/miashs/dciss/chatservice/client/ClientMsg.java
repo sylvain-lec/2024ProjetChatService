@@ -54,7 +54,7 @@ public class ClientMsg {
 	/**
 	 * Create a client with an existing id, that will connect to the server at the
 	 * given address and port
-	 * 
+	 *
 	 * @param id      The client id
 	 * @param address The server address or hostname
 	 * @param port    The port number
@@ -76,7 +76,7 @@ public class ClientMsg {
 	/**
 	 * Create a client without id, the server will provide an id during the the
 	 * session start
-	 * 
+	 *
 	 * @param address The server address or hostname
 	 * @param port    The port number
 	 */
@@ -87,7 +87,7 @@ public class ClientMsg {
 	/**
 	 * Register a MessageListener to the client. It will be notified each time a
 	 * message is received.
-	 * 
+	 *
 	 * @param l
 	 */
 	public void addMessageListener(MessageListener l) {
@@ -97,10 +97,10 @@ public class ClientMsg {
 	protected void notifyMessageListeners(Packet p) {
 		mListeners.forEach(x -> x.messageReceived(p));
 	}
-	
+
 	/**
 	 * Register a ConnectionListener to the client. It will be notified if the connection  start or ends.
-	 * 
+	 *
 	 * @param l
 	 */
 	public void addConnectionListener(ConnectionListener l) {
@@ -198,7 +198,7 @@ public class ClientMsg {
 
 	/**
 	 * Method to be called to establish the connection.
-	 * 
+	 *
 	 * @throws UnknownHostException
 	 * @throws IOException
 	 */
@@ -209,7 +209,7 @@ public class ClientMsg {
 				dos = new DataOutputStream(s.getOutputStream());
 				dis = new DataInputStream(s.getInputStream());
 				dos.writeInt(identifier);
-			//	dos.writeUTF(username);
+				//	dos.writeUTF(username);
 				dos.flush();
 				if (identifier == 0) {
 					identifier = dis.readInt();
@@ -228,7 +228,7 @@ public class ClientMsg {
 
 	/**
 	 * Send a packet to the specified destination (etiher a userId or groupId)
-	 * 
+	 *
 	 * @param destId the destinatiion id
 	 * @param data   the data to be sent
 	 */
@@ -244,7 +244,7 @@ public class ClientMsg {
 			// error, connection closed
 			closeSession();
 		}
-		
+
 	}
 
 	/**
@@ -362,7 +362,11 @@ public class ClientMsg {
 		String lu = null;
 		while (!"\\quit".equals(lu)) {
 			try {
+<<<<<<< HEAD
+				System.out.println("\n" + c.getUsername()+ ", que souhaitez-vous faire? \n0 : envoyer un message\n1 : créer un groupe\n2 : supprimer un groupe\n3 : ajouter un membre à un groupe\n4 : supprimer un membre d'un groupe\n5 : changer de nom\n7 : changer de mot de passe\n8 : Ajouter un contact\n");
+=======
 				System.out.println("\n" + c.getUsername()+ ", que souhaitez-vous faire? \n0 : envoyer un message\n1 : créer un groupe\n2 : supprimer un groupe\n3 : ajouter un membre à un groupe\n4 : supprimer un membre d'un groupe\n5 : changer de nom\n6 : changer de mot de passe\n");
+>>>>>>> c19fc8e43825ef06c582763d15ff1608f02c5e72
 				int code = Integer.parseInt(sc.nextLine());
 
 				if (code == 0) { //envoyer un msg
@@ -496,22 +500,39 @@ public class ClientMsg {
 						System.out.println("Mot de passe non reconnu. Veuillez réessayer.");
 						continue;
 					}
-				}
+				} else if (code == 8) { // ajouter contact à un utilisateur
+					ByteArrayOutputStream bos = new ByteArrayOutputStream();
+					DataOutputStream dos = new DataOutputStream(bos);
 
+					// Type 8 : Ajout de contact sur le serveur
+					dos.writeByte(8);
+
+					// Demander à l'utilisateur les informations sur le contact à ajouter
+					System.out.println("\nEntrez l'identifiant du contact : ");
+					int contactId = Integer.parseInt(sc.nextLine());
+					try {
+						dos.writeInt(contactId);
+						dos.flush();
+						c.sendPacket(0, bos.toByteArray());
+						System.out.println("Packet for adding contact sent to server.");
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				}
 
 
 			} catch (InputMismatchException | NumberFormatException e) {
 				System.out.println("Mauvais format");
 			}
-			}
+		}
 
 
 
 		/*
 		 * int id =1+(c.getIdentifier()-1) % 2; System.out.println("send to "+id);
 		 * c.sendPacket(id, "bonjour".getBytes());
-		 * 
-		 * 
+		 *
+		 *
 		 * Thread.sleep(10000);
 		 */
 

@@ -17,7 +17,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Logger;
 
 import fr.uga.miashs.dciss.chatservice.common.Packet;
-
 import java.util.*;
 
 public class UserMsg implements PacketProcessor{
@@ -26,6 +25,8 @@ public class UserMsg implements PacketProcessor{
 	private int userId;
 	private String username;
 	private String password;
+
+	private Set<Integer> contacts;
 	private Set<GroupMsg> groups;
 	
 	private ServerMsg server;
@@ -47,6 +48,7 @@ public class UserMsg implements PacketProcessor{
 		active=false;
 		sendQueue = new LinkedBlockingQueue<>();
 		groups = Collections.synchronizedSet(new HashSet<>());
+		contacts = Collections.synchronizedSet(new HashSet<>());
 		this.username = username;
 		this.password = password;
 	}
@@ -180,4 +182,21 @@ public boolean isConnected() {
 	public void setPassword(String password) {
 		this.password = password;
 	}
-}
+
+	;
+		public void addContact(int contactId) {
+			// Vérifier si l'utilisateur existe avant d'ajouter le contact
+			if (server.getUser(contactId) != null) {
+
+				if (!contacts.contains(contactId)) {
+					contacts.add(contactId);
+					LOG.info("Contact " + contactId + " added successfully for user " + userId);
+				} else {
+					LOG.warning("Contact " + contactId + " already exists for user " + userId);
+				}
+			} else {
+				LOG.warning("Attempt to add non-existent user " + contactId + " as a contact for user " + userId);
+			}
+		}
+
+	}

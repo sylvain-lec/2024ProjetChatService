@@ -11,8 +11,6 @@
 
 package fr.uga.miashs.dciss.chatservice.server;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -81,12 +79,28 @@ public class ServerPacketProcessor implements PacketProcessor {
 			//on met à jour le password côté serveur (setPassword() de la classe UserMsg)
 			server.getUser(userId).setPassword(password);
 			LOG.info("userId " + userId + " updated their password to : " + password);
+
+		}else if (type == 8) { //addContact
+			LOG.info("packet to add contact received by the server");
+			int userId = p.srcId; // récuperer Id user
+			int contactId = buf.getInt(); // id contact
+			addContact(userId, contactId);
+			LOG.info("contact added successfully");
 		}
 			//dans le cas où le type n'est pas déterminé
 		else {
 				LOG.warning("Server message of type=" + type + " not handled by procesor");
 		}
 	}
+
+	private void addContact(int userId, int contactId) {
+		UserMsg user = server.getUser(userId);
+		if (user != null) {
+			// Ajoutez le contact à l'utilisateur
+			user.addContact(contactId);
+		}
+	}
+
 
 	public void createGroup(int ownerId, ByteBuffer data) throws IOException {
 		int nb = data.getInt();
