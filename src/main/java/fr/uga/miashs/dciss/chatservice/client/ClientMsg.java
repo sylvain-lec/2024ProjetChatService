@@ -45,6 +45,8 @@ public class ClientMsg {
 	private int identifier;
 	private String username;
 	private String password;
+	private volatile boolean isAuthenticated = false;
+
 
 	private List<MessageListener> mListeners;
 	private List<ConnectionListener> cListeners;
@@ -158,32 +160,32 @@ public class ClientMsg {
 			dos.write(password.getBytes(StandardCharsets.UTF_8));
 			dos.flush();
 			sendPacket(0, bos.toByteArray());
-			System.out.println("login packet sent from sendLoginRequest() in ClientMsg");
+			//System.out.println("login packet sent from sendLoginRequest() in ClientMsg");
 
 
-			// READ THE SERVER'S RESPONSE to return a boolean. i'm not sure it's the right place to do it.
-			int length = dis.readInt();
-			byte[] data = new byte[length];
-			dis.readFully(data);
-/* TRACE */	System.out.println("TRACE : data received from server : " + new String(data));
-			if (data.length > 0) {
-				// The first byte of the data is the response type
-				int responseType = data[0]; //PROBLEM : LENGTH 0
-
-				if (responseType == 0) { // Authentication failed
-					System.out.println("Successfully authenticated.");
-					return true;
-				} else if (responseType == 1) { // Authentication succeeded
-					System.out.println("Authentication failed. Please try again.");
-					return false;
-				} else {
-					System.out.println("Received unexpected response type.");
-					return false;
-				}
-			} else { //empty response
-/* TRACE */		System.out.println("ClientMsg received an empty reponse from the server");
-				return false;
-			}
+//			// READ THE SERVER'S RESPONSE to return a boolean. i'm not sure it's the right place to do it.
+//			int length = dis.readInt();
+//			byte[] data = new byte[length];
+//			dis.readFully(data);
+///* TRACE */	System.out.println("TRACE : data received from server : " + new String(data));
+//			if (data.length > 0) {
+//				// The first byte of the data is the response type
+//				int responseType = data[0]; //PROBLEM : LENGTH 0
+//
+//				if (responseType == 0) { // Authentication failed
+//					System.out.println("Successfully authenticated.");
+//					return true;
+//				} else if (responseType == 1) { // Authentication succeeded
+//					System.out.println("Authentication failed. Please try again.");
+//					return false;
+//				} else {
+//					System.out.println("Received unexpected response type.");
+//					return false;
+//				}
+//			} else { //empty response
+///* TRACE */		System.out.println("ClientMsg received an empty reponse from the server");
+//				return false;
+//			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -265,6 +267,15 @@ public class ClientMsg {
 						int groupId = buffer.getInt();
 						System.out.println("Le groupe numéro " + groupId + " a été créé.");
 					}
+					else if (responseType == 10) { //authentication successful
+						System.out.println("You've been successfully authenticated. Type anything to continue.");
+						isAuthenticated = true ;
+					}
+					else if (responseType == 11) {
+						System.out.println("Authentication failed. Please try again.");
+						isAuthenticated = false ;
+					}
+
 				} else {
 					notifyMessageListeners(new Packet(sender, dest, data));
 				}
@@ -305,23 +316,46 @@ public class ClientMsg {
 
 		// AUTHENTIFICATION
 		String rep = "a" ;
-		while (!rep.equals("Y") && !rep.equals("N")) {
+
+		//while the user is trying to authenticate, and is not authenticated
+		while (!rep.equals("N") && !c.isAuthenticated) {
 			System.out.println("Voulez vous vous connecter? Y/N");
 			rep = sc.nextLine();
+			if (rep.equals("Y")) { //the user is trying to authenticate
+				System.out.println("Entrez votre nom d'utilisateur : ");
+				String username = sc.nextLine();
+				System.out.println("Entrez votre mot de passe : ");
+				String password = sc.nextLine();
+				c.sendLoginRequest(username, password);
+				System.out.println(c.getUsername());
+				if (c.isAuthenticated) {
+					c.setUsername(username);
+					break;
+				}
+			}
 		}
-		if (rep.equals("Y")) {
-			System.out.println("Entrez votre nom d'utilisateur : ");
-			String username = sc.nextLine();
-			c.setUsername(username);
-			System.out.println("Entrez votre mot de passe : ");
-			String password = sc.nextLine();
-			c.sendLoginRequest(username, password);
-			System.out.println("Vous êtes " + c.getUsername());
+		//now, either the user is authenticated, or they chose not to authenticate
+		System.out.println("Hello "+ c.getUsername() + "!");
 
-		}
-		else {
-			System.out.println("\nVous êtes : " + c.getUsername());
-		}
+
+
+//		while (!rep.equals("Y") && !rep.equals("N")) {
+//			System.out.println("Voulez vous vous connecter? Y/N");
+//			rep = sc.nextLine();
+//		}
+//		if (rep.equals("Y")) {
+//			System.out.println("Entrez votre nom d'utilisateur : ");
+//			String username = sc.nextLine();
+//			c.setUsername(username);
+//			System.out.println("Entrez votre mot de passe : ");
+//			String password = sc.nextLine();
+//			c.sendLoginRequest(username, password);
+//			System.out.println("Vous êtes " + c.getUsername());
+//
+//		}
+//		else {
+//			System.out.println("\nVous êtes : " + c.getUsername());
+//		}
 
 		String lu = null;
 		while (!"\\quit".equals(lu)) {
