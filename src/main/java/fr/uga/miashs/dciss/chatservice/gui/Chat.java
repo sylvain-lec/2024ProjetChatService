@@ -10,6 +10,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import javax.swing.ImageIcon;
 import javax.swing.text.*;
 
@@ -77,30 +78,22 @@ public class Chat {
         loginButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                JTextField idField = new JTextField(5);
-                JPasswordField passwordField = new JPasswordField(5);
+                String userId = JOptionPane.showInputDialog(frame, "Enter your id:");
+                String password = JOptionPane.showInputDialog(frame, "Enter your password:");
 
-                JPanel myPanel = new JPanel();
-                myPanel.add(new JLabel("id:"));
-                myPanel.add(idField);
-                int id = Integer.parseInt(idField.getText());
-                clientMsg.setIdentifier(id) ;
-                myPanel.add(Box.createHorizontalStrut(15)); // a spacer
-                myPanel.add(new JLabel("Password:"));
-                myPanel.add(passwordField);
+                try {
+                    clientMsg.setIdentifier(Integer.parseInt(userId));
+                    clientMsg.startSession(password);
+                  //  clientMsg.askInfos();
 
-                int result = JOptionPane.showConfirmDialog(null, myPanel,
-                        "Votre id et Password", JOptionPane.OK_CANCEL_OPTION);
-                if (result == JOptionPane.OK_OPTION) {
-                    try {
-                        clientMsg.startSession(new String(passwordField.getPassword()));
-                        initializeUI();
-                        customizeUIComponents();
-                        initializeButtons();
-                    } catch (UnknownHostException ex) {
-                        throw new RuntimeException(ex);
-                    }
+                    System.out.println("User ID: " + clientMsg.getIdentifier() + ", Username: " + clientMsg.getUsername() + ", Password: " + password);
+                    initializeUI();
+                    customizeUIComponents();
+                    initializeButtons();
+                } catch (UnknownHostException ex) {
+                    throw new RuntimeException(ex);
                 }
+
             }
         });
 
@@ -141,13 +134,42 @@ public class Chat {
         createGroupButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String groupIdString = JOptionPane.showInputDialog(frame, "Entrez l'ID du groupe:");
-                if (groupIdString != null && !groupIdString.trim().isEmpty()) {
-                    int groupId = Integer.parseInt(groupIdString);
-                    //clientMsg.creationGroupe(groupId);
-                    JOptionPane.showMessageDialog(frame, "Le groupe \"" + groupIdString + "\" a été créé avec succès.", "Succès", JOptionPane.INFORMATION_MESSAGE);
+                // Create a list to store the members
+                ArrayList<Integer> members = new ArrayList<>();
 
+                // Continuously show the input dialog until the user presses cancel
+                while (true) {
+                    String memberString = JOptionPane.showInputDialog(frame, "Ajoutez un membre (ou appuyez sur Annuler pour terminer):");
+
+                    // If the user pressed cancel, memberString will be null
+                    if (memberString == null || memberString.trim().isEmpty()) {
+                        break;
+                    }
+                    // Convert the input to an integer and add it to the list
+                    try {
+                        int memberId = Integer.parseInt(memberString);
+                        members.add(memberId);
+                    } catch (NumberFormatException ex) {
+                        JOptionPane.showMessageDialog(frame, "Invalid input. Please enter a number.", "Error", JOptionPane.ERROR_MESSAGE);
+                    }
                 }
+                clientMsg.creationGroupe(members);
+                JOptionPane.showMessageDialog(frame, "Le groupe a été créé avec succès.", "Succès", JOptionPane.INFORMATION_MESSAGE);
+
+
+                // Create the group with the list of members
+//                if (!members.isEmpty()) {
+//                    clientMsg.creationGroupe(members);
+//                    JOptionPane.showMessageDialog(frame, "Le groupe a été créé avec succès.", "Succès", JOptionPane.INFORMATION_MESSAGE);
+//                }
+//
+//                String memberString = JOptionPane.showInputDialog(frame, "Ajoutez un membre :");
+//                if (groupIdString != null && !groupIdString.trim().isEmpty()) {
+//
+//                    clientMsg.creationGroupe();
+//                    JOptionPane.showMessageDialog(frame, "Le groupe \"" + groupIdString + "\" a été créé avec succès.", "Succès", JOptionPane.INFORMATION_MESSAGE);
+//
+//                }
             }
 
         });

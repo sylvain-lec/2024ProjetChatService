@@ -614,7 +614,7 @@ public class ClientMsg {
 	/**
 	 * Ask the server for the username and password associated with the userId
 	 */
-	private void askInfos() {
+	public void askInfos() {
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		DataOutputStream dos = new DataOutputStream(bos);
 		try {
