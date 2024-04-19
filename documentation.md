@@ -21,16 +21,36 @@
 
 ## 2. Setup and Installation - TODO
 
-   **Environment Requirements**: List of necessary software, tools, and libraries needed to run the project.
+**Environment Requirements**: Java and Maven are required to run the project.
 
-   **Installation Instructions**: Step-by-step guide to setting up the project in a development environment, including any dependencies.
+**Installation Instructions**: Clone the repository, navigate to the project directory, and run `mvn install` to install the necessary dependencies.
 
-## 3. Feature Documentation - TODO
+## 3. Feature Documentation
 
-   **For each feature** developed during the week, include:
-   * **Feature Overview**: Description of what the feature does and why it’s important.  
-   * **Technical Implementation**: Detailed explanation of how the feature was implemented, including any significant classes, methods, and algorithms used.  
-   * **Configuration**: Any configurations needed to customize or optimize the feature.
+**Login Feature**:
+* **Feature Overview**: This feature allows users to log in to the DCISS Chat Service by providing a username and password.
+* **Technical Implementation**: The login functionality is implemented in the `login` method in the `ClientMsg.java` file. It sends a login packet to the server, which verifies the user's credentials and responds with a success or failure message.
+* **Error Handling**: If the login fails, the client displays an error message to the user.
+
+**Group Chat Feature**:
+* **Feature Overview**: This feature allows users to create and participate in group chats with multiple participants.
+* **Technical Implementation**: The group chat functionality is implemented in the `sendPacket` method in the `ClientMsg.java` file. It sends a packet of data to the server, which then routes it to all members of the group.
+
+**Contact List Feature**:
+* **Feature Overview**: This feature displays a list of contacts that the user can interact with, including sending messages and viewing their status.
+* **Technical Implementation**: The contact list is populated by the server and sent to the client when the user logs in. It is displayed in the GUI using a list or table view, with options for selecting contacts and initiating conversations.
+
+**Send Message Feature**:
+* **Feature Overview**: This feature allows the client to send a message to another client or a group of clients.
+* **Technical Implementation**: The feature is implemented in the `sendPacket` method in the `ClientMsg.java` file. It sends a packet of data to the server, which then routes it to the appropriate recipients.
+
+**Send File Feature**:
+* **Feature Overview**: This feature allows the client to send a file to another client or a group of clients.
+* **Technical Implementation**: The feature is implemented in the `sendFile` method in the `ClientMsg.java` file. It sends a file as a packet of data to the server, which then routes it to the appropriate recipients. The file is read into a byte array, which is then sent as part of the packet. On the receiving end, the byte array is converted back into a file.
+
+**Graphical User Interface (GUI) Feature**:
+* **Feature Overview**: This feature provides a user-friendly interface for interacting with the DCISS Chat Service. It includes windows for logging in, sending messages, viewing contact lists, and more.
+* **Technical Implementation**: The GUI is implemented using Java's Swing . It includes classes for each window or panel in the application, such as `LoginWindow.java`, `ChatWindow.java`, `ContactListPanel.java`, etc. Each class contains methods for initializing the GUI components, handling user input, and updating the display.
 
 ## 4. User Guide - TODO
 

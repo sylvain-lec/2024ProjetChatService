@@ -275,6 +275,7 @@ public class ClientMsg {
 			throw new IllegalArgumentException("Invalid file packet type: " + type);
 		}
 		String filename = dis.readUTF();
+		// Pour détecter le type d un fichier : Files.probeContentType(...)
 		String fileExtension = dis.readUTF();
 		int fileContentLength = dis.readInt(); // read the size of the file content for syso
 
