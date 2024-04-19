@@ -19,6 +19,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -239,10 +240,10 @@ public class ClientMsg {
 			String fileExtension = getFileExtension(filePath);
 			ByteArrayOutputStream bos = new ByteArrayOutputStream();
 			DataOutputStream dos = new DataOutputStream(bos);
-			dos.writeByte(9); // send file
-			dos.writeInt(filename.length()); // send size of filename
+			dos.writeByte(12); // send file
+			//dos.writeInt(filename.length()); // send size of filename
 			dos.writeUTF(filename);
-			dos.writeInt(fileExtension.length()); // send size of file extension
+			//dos.writeInt(fileExtension.length()); // send size of file extension
 			dos.writeUTF(fileExtension);
 			dos.writeInt(data.length); // send size of file content
 			dos.write(data);
@@ -266,25 +267,27 @@ public class ClientMsg {
 	/**
 	 * Method to handle file packets
 	 */
-	private void handleFilePacket(byte[] data, String filePath) throws IOException {
+	private void handleFilePacket(byte[] data/*, String filePath*/) throws IOException {
 		// get the filename, file extension and the file content
-		ByteBuffer buffer = ByteBuffer.wrap(data);
-		int filenameLength = buffer.getInt();
-		byte[] filenameBytes = new byte[filenameLength];
-		dis.readFully(filenameBytes);
-		String filename = new String(filenameBytes, StandardCharsets.UTF_8);
+		//ByteBuffer buffer = ByteBuffer.wrap(data);
+		DataInputStream dis = new DataInputStream(new ByteArrayInputStream(data));
 
-		int fileExtensionLength = buffer.getInt();
-		byte[] fileExtensionBytes = new byte[fileExtensionLength];
-		dis.readFully(fileExtensionBytes);
-		String fileExtension = new String(fileExtensionBytes, StandardCharsets.UTF_8);
+		byte type = dis.readByte();
+		if (type != 12) {
+			throw new IllegalArgumentException("Invalid file packet type: " + type);
+		}
+		String filename = dis.readUTF();
+		String fileExtension = dis.readUTF();
 
-		int fileContentLength = buffer.getInt();
+		int fileContentLength = dis.readInt();
 		byte[] fileContent = new byte[fileContentLength];
-		dis.readFully(fileContent);
+
+		Files.copy(dis, Paths.get(filename + "." + fileExtension));
+
+		//dis.readFully(fileContent);
 		System.out.println("File received successfully, size: " + fileContent.length + " bytes");
 
-		try {
+		/*try {
 			// save the file in the chosen directory with the correct file extension
 			File file = new File(filePath + "/" + filename + "." + fileExtension);
 			FileOutputStream fos = new FileOutputStream(file);
@@ -293,7 +296,7 @@ public class ClientMsg {
 			System.out.println("File " + filename + "." + fileExtension + " received and saved in " + filePath + " directory.");
 		} catch (Exception e) {
 			System.out.println("An error occurred while writing the file: " + e.getMessage());
-		}
+		}*/
 	}
 
 		/**
@@ -307,16 +310,6 @@ public class ClientMsg {
 				int length = dis.readInt();
 				byte[] data = new byte[length];
 				dis.readFully(data);
-
-				// if the packet is a file, save it in the client's directory
-				if (sender != ServerMsg.SERVER_CLIENTID && dest == this.identifier){
-					// prompt the user for a file path
-					System.out.println("Enter the path where you want to save the file:");
-					Scanner scanner = new Scanner(System.in);
-					scanner.nextLine(); // Clear the scanner buffer
-					String filePath = scanner.nextLine();
-					handleFilePacket(data, filePath);
-				}
 
 				if (sender == ServerMsg.SERVER_CLIENTID && dest == this.identifier) {
 					ByteBuffer buffer = ByteBuffer.wrap(data);
@@ -353,23 +346,23 @@ public class ClientMsg {
 						String password = new String(passwordBytes, StandardCharsets.UTF_8); //retrieve the password
 						this.password = password; //set the password
 					}
-//					else if (responseType == 10) { //authentication successful
-//						System.out.println("You've been successfully authenticated. Type anything to continue.");
-//						//set userId to the userId received in the packet
-//						int newUserId = buffer.getInt();
-//	/* SET HERE	*/		this.identifier = newUserId;
-//						System.out.println("new id : "+ this.getIdentifier());
-//						isAuthenticated = true ;
-//					}
-//					else if (responseType == 11) {
-//						System.out.println("Authentication failed. Please try again.");
-//						isAuthenticated = false ;
-//					}
 
-					} else {
-						notifyMessageListeners(new Packet(sender, dest, data));
-					}
+					/*else if (responseType == 12){ // file packet
+						// prompt the user for a file path
+						System.out.println("Enter the path where you want to save the file:");
+						Scanner scanner = new Scanner(System.in);
+						scanner.nextLine(); // Clear the scanner buffer
+						String filePath = scanner.nextLine();
+						handleFilePacket(data, filePath);
+
+					}*/
+				} else if (data[0]==12) {
+					handleFilePacket(data);
+				}  else {
+					notifyMessageListeners(new Packet(sender, dest, data));
 				}
+				}
+
 
 		} catch (IOException e) {
 			// En cas d'erreur, fermer la connexion

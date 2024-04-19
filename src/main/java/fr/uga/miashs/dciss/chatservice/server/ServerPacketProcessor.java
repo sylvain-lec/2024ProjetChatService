@@ -73,9 +73,9 @@ public class ServerPacketProcessor implements PacketProcessor {
 			sendInfos(p, buf);
 		}
 
-    	else if (type == 9) { //cas envoi de fichier
-			sendFile(p.srcId, buf);
-		}
+    	/*else if (type == 12) { //cas envoi de fichier
+			sendFile(p.srcId, p.destId, buf);
+		}*/
 
 			//dans le cas où le type n'est pas déterminé
 		else {
@@ -102,24 +102,36 @@ public class ServerPacketProcessor implements PacketProcessor {
 	 *  Protocol to send a file to another user
 	 *  packet format : type (1 byte) + destId (4 bytes) + filename length (4 bytes) + filename + file length (4 bytes) + file
 	 *  @param userId
-	 *  @param data
+	 *  @param buf
 	 */
-	private void sendFile(int userId, ByteBuffer data) {
+	/*private void sendFile(int userId, int destId, ByteBuffer buf) {
 		LOG.info("ServerPacketProcessor : sendFile() called");
-		int destId = data.getInt();
-		int length = data.getInt();
-		// Get the filename
+		//int destId = buf.getInt();
+		int length = buf.getInt();
 		byte[] filenameBytes = new byte[length];
-		data.get(filenameBytes);
+		buf.get(filenameBytes);
 		String filename = new String(filenameBytes, StandardCharsets.UTF_8);
-		// Get the file length
-		length = data.getInt();
+		length = buf.getInt();
+		byte[] fileExtensionBytes = new byte[length];
+		buf.get(fileExtensionBytes);
+		length = buf.getInt();
 		byte[] fileBytes = new byte[length];
-		data.get(fileBytes);
-		// Send the file to the destination user
-		Packet response = new Packet(userId, destId, fileBytes);
+		buf.get(fileBytes);
+
+		//new buffer to send the file
+		ByteBuffer buffer = ByteBuffer.allocate(1 + 4 + filenameBytes.length + 4 + fileBytes.length);
+		buffer.put((byte) 12);
+		buffer.putInt(filenameBytes.length);
+		buffer.put(filenameBytes);
+		buffer.putInt(fileBytes.length);
+		buffer.put(fileBytes);
+
+		//put it in a byte buffer
+		byte[] data = buffer.array();
+
+		Packet response = new Packet(userId, destId, data);
 		server.getUser(destId).process(response);
-	}
+	}*/
 
 	/**
 	 * Sends the username of the user to the client when asked to. used by the client to get back its username after login
