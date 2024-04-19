@@ -14,6 +14,8 @@ package fr.uga.miashs.dciss.chatservice.server;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 
 import fr.uga.miashs.dciss.chatservice.common.Packet;
@@ -60,52 +62,72 @@ public class ServerPacketProcessor implements PacketProcessor {
 		}
 
 		else if (type == 8) { //addContact
-			int userId = p.srcId; // récuperer Id user
-			int contactId = buf.getInt(); // id contact
-			int contactNameLength = buf.getInt(); // longueur du nom du contact
-			byte[] contactNameBytes = new byte[contactNameLength];
-			buf.get(contactNameBytes); // lire le nom du contact
-			String contactName = new String(contactNameBytes, StandardCharsets.UTF_8);
-			addContact(userId, contactId, contactName);
-			LOG.info("packet to add contact received by the server");
+			addContact(p, buf);
 
+		} else if (type == 9) { //cas demande de liste de contacts
+			sendContactsList(p.srcId);
 		}
+		//dans le cas où le type n'est pas déterminé
 
 		else if (type == 11) { //CASE INFORMATION RETRIEVAL
 			sendInfos(p, buf);
 		}
 
-    	else if (type == 9) { //cas envoi de fichier
-			sendFile(p.srcId, buf);
-		}
-
 			//dans le cas où le type n'est pas déterminé
 		else {
-				LOG.warning("Server message of type=" + type + " not handled by procesor");
+			LOG.warning("Server message of type=" + type + " not handled by procesor");
 		}
 	}
 
-	/**
+    private void addContact(Packet p, ByteBuffer buf) {
+        int userId = p.srcId;
+        int contactNameLength = buf.getInt();
+        byte[] contactNameBytes = new byte[contactNameLength];
+        buf.get(contactNameBytes);
+        String contactName = new String(contactNameBytes, StandardCharsets.UTF_8);
+        UserMsg user = server.getUser(userId);
+        if (user != null) {
+            user.addContact(contactName);
+            LOG.info("Contact added successfully for user with ID: " + userId +  ", contact Name: " + contactName);
+        } else {
+            LOG.warning("User with ID " + userId + " not found. Contact not added.");
+        }
+    }
+
+    /**
 	 *  Protocol to send a file to another user
 	 *  packet format : type (1 byte) + destId (4 bytes) + filename length (4 bytes) + filename + file length (4 bytes) + file
 	 *  @param userId
-	 *  @param data
+	 *  @param buf
 	 */
-	private void sendFile(int userId, ByteBuffer data) {
-		int destId = data.getInt();
-		int length = data.getInt();
-		// Get the filename
+	/*private void sendFile(int userId, int destId, ByteBuffer buf) {
+		LOG.info("ServerPacketProcessor : sendFile() called");
+		//int destId = buf.getInt();
+		int length = buf.getInt();
 		byte[] filenameBytes = new byte[length];
-		data.get(filenameBytes);
+		buf.get(filenameBytes);
 		String filename = new String(filenameBytes, StandardCharsets.UTF_8);
-		// Get the file length
-		length = data.getInt();
+		length = buf.getInt();
+		byte[] fileExtensionBytes = new byte[length];
+		buf.get(fileExtensionBytes);
+		length = buf.getInt();
 		byte[] fileBytes = new byte[length];
-		data.get(fileBytes);
-		// Send the file to the destination user
-		Packet response = new Packet(userId, destId, fileBytes);
+		buf.get(fileBytes);
+
+		//new buffer to send the file
+		ByteBuffer buffer = ByteBuffer.allocate(1 + 4 + filenameBytes.length + 4 + fileBytes.length);
+		buffer.put((byte) 12);
+		buffer.putInt(filenameBytes.length);
+		buffer.put(filenameBytes);
+		buffer.putInt(fileBytes.length);
+		buffer.put(fileBytes);
+
+		//put it in a byte buffer
+		byte[] data = buffer.array();
+
+		Packet response = new Packet(userId, destId, data);
 		server.getUser(destId).process(response);
-	}
+	}*/
 
 	/**
 	 * Sends the username of the user to the client when asked to. used by the client to get back its username after login
@@ -172,14 +194,29 @@ public class ServerPacketProcessor implements PacketProcessor {
 		LOG.info(server.getUsers());
 	}
 
-	private void addContact(int userId, int contactId, String contactName) {
+
+	private void sendContactsList(int userId) {
+		LOG.info("List of contacts for user ");
 		UserMsg user = server.getUser(userId);
 		if (user != null) {
-			// Ajoute le contact à l'utilisateur
-			user.addContact(contactId, contactName);
-			LOG.info("Contact added successfully for user with ID: " + userId + ", contact ID: " + contactId + ", contact Name: " + contactName);
+			List<String> contacts = user.getContacts();
+
+
+			ByteBuffer buffer = ByteBuffer.allocate(1024);
+			buffer.putInt(contacts.size());
+
+
+			for (String contact : contacts) {
+				byte[] contactBytes = contact.getBytes(StandardCharsets.UTF_8);
+				buffer.putInt(contactBytes.length);
+				buffer.put(contactBytes);
+			}
+
+			buffer.flip();
+
+			server.sendPacketToUser(userId, buffer.array());
 		} else {
-			LOG.warning("User with ID " + userId + " not found. Contact not added.");
+			LOG.warning("User with ID " + userId + " not found. Unable to display the list of contacts.");
 		}
 	}
 
@@ -229,7 +266,7 @@ public class ServerPacketProcessor implements PacketProcessor {
 		byte[] dataMsg2 = buffer2.array();
 
 		//send to everyone, except to the owner
-for (UserMsg u : g.getMembers()) {
+		for (UserMsg u : g.getMembers()) {
 			if (u.getId() != ownerId) {
 				Packet reponse2 = new Packet(0, u.getId(), dataMsg2);
 				u.process(reponse2);
@@ -313,6 +350,7 @@ for (UserMsg u : g.getMembers()) {
 
 				for (UserMsg u : groupe.getMembers()) {
 					Packet reponse = new Packet(0, u.getId(), data);
+
 					u.process(reponse);
 				}
 				server.removeGroup(groupId);

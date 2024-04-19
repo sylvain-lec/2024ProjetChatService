@@ -19,6 +19,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -156,23 +157,26 @@ public class ClientMsg {
 	public void setPassword(String password) {
 		this.password = password;
 
-		//send packet to the server; the server will update the password.
-		//1byte for the type (7), 4bytes (an int) for the length of the password, then the password
-		ByteArrayOutputStream bos = new ByteArrayOutputStream();
-		DataOutputStream dos = new DataOutputStream(bos);
-		try {
-			dos.writeByte(7);
-			dos.writeInt(password.length());
-			dos.write(password.getBytes(StandardCharsets.UTF_8));
-			dos.flush();
-			sendPacket(0, bos.toByteArray());
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+        //send packet to the server; the server will update the password.
+        //1byte for the type (7), 4bytes (an int) for the length of the password, then the password
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        DataOutputStream dos = new DataOutputStream(bos);
+        try {
+            dos.writeByte(7);
+            dos.writeInt(password.length());
+            dos.write(password.getBytes(StandardCharsets.UTF_8));
+            dos.flush();
+            sendPacket(0, bos.toByteArray());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 	}
+
 	public String getPassword() {
 		return password;
 	}
+
+
 
 	/**
 	 * Method to be called to establish the connection.
@@ -228,14 +232,75 @@ public class ClientMsg {
 			// error, connection closed
 			closeSession();
 		}
+    }
+
+	/**
+	 * Method to send files with their name and extension
+	 */
+	public void sendFile(int destId, Path filePath, String filename) {
+		try {
+			byte[] data = Files.readAllBytes(filePath);
+			System.out.println("File read successfully, size: " + data.length + " bytes");
+			String fileExtension = getFileExtension(filePath);
+			ByteArrayOutputStream bos = new ByteArrayOutputStream();
+			DataOutputStream dos = new DataOutputStream(bos);
+			dos.writeByte(12); // send file
+			//dos.writeInt(filename.length()); // send size of filename
+			dos.writeUTF(filename);
+			//dos.writeInt(fileExtension.length()); // send size of file extension
+			dos.writeUTF(fileExtension);
+			dos.writeInt(data.length); // send size of file content
+			dos.write(data);
+			dos.flush();
+			sendPacket(destId, bos.toByteArray());
+			System.out.println("File sent successfully");
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	/**
-	 * Method to send files
+	 * Method to get the file extension
 	 */
-	public void sendFile(int destId, Path filePath) throws IOException {
-		byte[] fileData = Files.readAllBytes(filePath);
-		sendPacket(destId, fileData);
+	private String getFileExtension(Path filePath) {
+		String fileName = filePath.getFileName().toString();
+		int dotIndex = fileName.lastIndexOf('.');
+		return (dotIndex == -1) ? "" : fileName.substring(dotIndex + 1);
+	}
+
+	/**
+	 * Method to handle file packets
+	 */
+	private void handleFilePacket(byte[] data/*, String filePath*/) throws IOException {
+		// get the filename, file extension and the file content
+		//ByteBuffer buffer = ByteBuffer.wrap(data);
+		DataInputStream dis = new DataInputStream(new ByteArrayInputStream(data));
+
+		byte type = dis.readByte();
+		if (type != 12) {
+			throw new IllegalArgumentException("Invalid file packet type: " + type);
+		}
+		String filename = dis.readUTF();
+		String fileExtension = dis.readUTF();
+
+		int fileContentLength = dis.readInt();
+		byte[] fileContent = new byte[fileContentLength];
+
+		Files.copy(dis, Paths.get(filename + "." + fileExtension));
+
+		//dis.readFully(fileContent);
+		System.out.println("File received successfully, size: " + fileContent.length + " bytes");
+
+		/*try {
+			// save the file in the chosen directory with the correct file extension
+			File file = new File(filePath + "/" + filename + "." + fileExtension);
+			FileOutputStream fos = new FileOutputStream(file);
+			fos.write(fileContent);
+			fos.close();
+			System.out.println("File " + filename + "." + fileExtension + " received and saved in " + filePath + " directory.");
+		} catch (Exception e) {
+			System.out.println("An error occurred while writing the file: " + e.getMessage());
+		}*/
 	}
 
 		/**
@@ -289,23 +354,24 @@ public class ClientMsg {
 						String password = new String(passwordBytes, StandardCharsets.UTF_8); //retrieve the password
 						this.password = password; //set the password
 					}
-//					else if (responseType == 10) { //authentication successful
-//						System.out.println("You've been successfully authenticated. Type anything to continue.");
-//						//set userId to the userId received in the packet
-//						int newUserId = buffer.getInt();
-//	/* SET HERE	*/		this.identifier = newUserId;
-//						System.out.println("new id : "+ this.getIdentifier());
-//						isAuthenticated = true ;
-//					}
-//					else if (responseType == 11) {
-//						System.out.println("Authentication failed. Please try again.");
-//						isAuthenticated = false ;
-//					}
 
-					} else {
-						notifyMessageListeners(new Packet(sender, dest, data));
-					}
+					/*else if (responseType == 12){ // file packet
+						// prompt the user for a file path
+						System.out.println("Enter the path where you want to save the file:");
+						Scanner scanner = new Scanner(System.in);
+						scanner.nextLine(); // Clear the scanner buffer
+						String filePath = scanner.nextLine();
+						handleFilePacket(data, filePath);
+
+					}*/
+				} else if (data[0]==12) {
+					handleFilePacket(data);
+				}  else {
+					notifyMessageListeners(new Packet(sender, dest, data));
 				}
+				}
+
+
 		} catch (IOException e) {
 			// En cas d'erreur, fermer la connexion
 			e.printStackTrace();
@@ -382,34 +448,28 @@ public class ClientMsg {
 		String lu = null;
 		while (!"\\quit".equals(lu)) {
 			try {
-				System.out.println("\n" + c.getUsername()+ ", que souhaitez-vous faire? \n0 : envoyer un message\n1 : créer un groupe\n2 : supprimer un groupe\n3 : ajouter un membre à un groupe\n4 : supprimer un membre d'un groupe\n5 : changer de nom\n7 : changer de mot de passe\n8 : Ajouter un contact\n");
+				System.out.println("\n" + c.getUsername()+ ", que souhaitez-vous faire? \n0 : envoyer un message\n1 : envoyer un fichier\n2 : créer un groupe\n3 : supprimer un groupe\n4 : ajouter un membre à un groupe\n5 : supprimer un membre d'un groupe\n6 : changer de nom\n7 : changer de mot de passe\n8 : Ajouter un contact\n9 : Afficher la liste des contacts\n");
 				int code = Integer.parseInt(sc.nextLine());
 
 				if (code == 0) { //envoyer un msg
 					System.out.println("\nA qui voulez vous écrire ? ");
 					int dest = Integer.parseInt(sc.nextLine());
-
-//					System.out.println("\n Voulez-vous envoyer une image? \n0 : oui\n1 : non");
-//					int codeI = Integer.parseInt(sc.nextLine());
-//					if (codeI == 0) { // Send an image
-//						ByteArrayOutputStream bos = new ByteArrayOutputStream();
-//						DataOutputStream dos = new DataOutputStream(bos);
-//
-//						dos.writeByte(6);
-//						System.out.println("Adresse de l'image - format jpg:");
-//						String imagePath = sc.nextLine();
-//						BufferedImage image = ImageIO.read(new File(imagePath));
-//						Packet packet = new Packet(c.getIdentifier(), dest, bos.toByteArray(), image);
-//						c.sendPacket(dest, packet.toByteArray());
-//					}
-
 					System.out.println("\nVotre message ? ");
 					lu = sc.nextLine();
 					c.sendPacket(dest, lu.getBytes());
 
-				}
+				} else if (code == 1) { //envoyer un fichier
+					System.out.println("\nA qui voulez vous envoyer un fichier ? ");
+					int dest = Integer.parseInt(sc.nextLine());
+					System.out.println("\nChemin du fichier ? ");
+					String path = sc.nextLine(); // Use nextLine() to read the file path
+					Path filePath = Path.of(path);
+					// Path is root of user
+					// Path filePath = Path.of(System.getProperty("user.dir"));
+					String filename = filePath.getFileName().toString();
+					c.sendFile(dest, filePath, filename);
 
-				else if (code == 1) { //creer un groupe
+				} else if (code == 2) { //creer un groupe
 					List<Integer> members = new ArrayList<>();
 					int member = 1;
 					// list of members
@@ -421,13 +481,13 @@ public class ClientMsg {
 					c.creationGroupe(members);
 				}
 
-				else if (code == 2) { //supprimer un groupe
+				else if (code == 3) { //supprimer un groupe
 					System.out.println("quel groupe ?");
 					int gp = Integer.parseInt(sc.nextLine());
 					c.supprimerGroupe(gp);
 				}
 
-				else if (code == 3) { //ajouter un member à un groupe
+				else if (code == 4) { //ajouter un member à un groupe
 					System.out.println("\nDans quel groupe voulez-vous ajouter un membre?");
 					int idGroup = Integer.parseInt(sc.nextLine());
 
@@ -437,7 +497,7 @@ public class ClientMsg {
 					c.addMember(idGroup, userId);
 				}
 
-				else if (code == 4) { //supprimer un membre d'un
+				else if (code == 5) { //supprimer un membre d'un
 					System.out.println("\nDans quel groupe voulez-vous supprimer un membre?");
 					int idGroup = Integer.parseInt(sc.nextLine()); // idGroup
 
@@ -447,66 +507,69 @@ public class ClientMsg {
 					c.removeMember(idGroup, userId);
 				}
 
-				else if (code == 5) { //changer de nom
+				else if (code == 6) { //changer de nom
 					System.out.println("\nNew username : ");
 					String newUsername = sc.nextLine();
 					c.setUsername(newUsername);
-					System.out.println("\nYou are " + c.getUsername());
+					System.out.println("Vous êtes " + c.getUsername());
 				}
 
 				else if (code == 7) { //change password
 					boolean reussi = c.updatePassword();
 
-				} else if (code == 8) { // ajouter contact à un utilisateur
-					ByteArrayOutputStream bos = new ByteArrayOutputStream();
-					DataOutputStream dos = new DataOutputStream(bos);
-
-					// Type 8 : Ajout de contact sur le serveur
-					dos.writeByte(8);
-
-					// Demander à l'utilisateur les informations sur le contact à ajouter
-					System.out.println("\nEntrez l'identifiant du contact : ");
-					int contactId = Integer.parseInt(sc.nextLine());
-					System.out.println("\nEntrez le nom du contact : ");
-					String contactName = sc.nextLine();
+				} else if (code == 8) { // Ajouter un contact à un utilisateur
 					try {
-						dos.writeInt(contactId);
+						// Création du flux de sortie pour écrire les données du paquet
+						ByteArrayOutputStream bos = new ByteArrayOutputStream();
+						DataOutputStream dos = new DataOutputStream(bos);
+
+						// Type 8 : Ajout de contact sur le serveur
+						dos.writeByte(8);
+
+						System.out.println("\nEntrez le nom du contact : ");
+						String contactName = sc.nextLine();
+
 						dos.writeInt(contactName.getBytes(StandardCharsets.UTF_8).length);
 						dos.write(contactName.getBytes(StandardCharsets.UTF_8));
 						dos.flush();
 
 						c.sendPacket(0, bos.toByteArray());
 						System.out.println("Packet for adding contact sent to server.");
+
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
+				} else if (code == 9) { // Demander la liste de contacts
+					c.requestContactList();
 				}
 
 
+
 			} catch (InputMismatchException | NumberFormatException e) {
-				System.out.println("Mauvais format");
+				System.out.println("Mauvais format: " + e.getMessage());
 			}
 		}
 
-		c.closeSession();
+        c.closeSession();
 
-	}
+    }
 
-	/**
-	 * Update the password of the user
-	 * packet format (if correct password) : 1byte for the type (7), 4bytes (an int) for the length of the password, then the password
-	 * @return true if the password has been updated, false otherwise
-	 */
-	public boolean updatePassword() {
-		Scanner sc = new Scanner(System.in);
+    /**
+     * Update the password of the user
+     * packet format (if correct password) : 1byte for the type (7), 4bytes (an int) for the length of the password, then the password
+     *
+     * @return true if the password has been updated, false otherwise
+     */
+    public boolean updatePassword() {
+        Scanner sc = new Scanner(System.in);
 
-		System.out.println("\nSaisissez votre ancien mot de passe : ");
-		String oldPassword = sc.nextLine();
-		//get password associated with the username, without using the server
-		boolean isAuthenticated = this.getPassword().equals(oldPassword);
-		//if the password is correct, the server will ask for the new password
-		//AUTHENTIFICATION
-		if (isAuthenticated) {
+        System.out.println("\nSaisissez votre ancien mot de passe : ");
+        String oldPassword = sc.nextLine();
+        //get password associated with the username, without using the server
+        boolean isAuthenticated = this.getPassword().equals(oldPassword);
+        //if the password is correct, the server will ask for the new password
+        //AUTHENTIFICATION
+        if (isAuthenticated) {
 			System.out.println("Mot de passe correct. Nouveau mot de passe : ");
 			String newPassword = sc.nextLine();
 			//send packet to the server; the server will update the password.
@@ -651,6 +714,128 @@ public class ClientMsg {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+
+}
+
+
+	public Socket getSocket() {
+			return s;
+		}
+
+	/*public void requestContactList() {
+		Thread thread = new Thread(() -> {
+			try (ByteArrayOutputStream bos = new ByteArrayOutputStream();
+				 DataOutputStream dos = new DataOutputStream(bos)) {
+
+				// Type 9 : Demande de liste de contacts
+				dos.writeByte(9);
+
+				// Envoi du paquet au serveur
+				this.sendPacket(0, bos.toByteArray());
+
+				// Lecture de la réponse du serveur
+				try (DataInputStream dis = new DataInputStream(this.getSocket().getInputStream())) {
+
+					// Lecture de la longueur de la liste des contacts
+					int contactListLength = dis.readInt();
+
+					// Lecture de la liste des contacts
+					List<String> contactList = new ArrayList<>();
+					for (int i = 0; i < contactListLength; i++) {
+						int contactLength = dis.readInt();
+						byte[] contactBytes = new byte[contactLength];
+						dis.readFully(contactBytes);
+						String contact = new String(contactBytes, StandardCharsets.UTF_8);
+						contactList.add(contact);
+					}
+
+					StringBuilder sb = new StringBuilder();
+					sb.append("Liste des contacts : [");
+					for (int i = 0; i < contactList.size(); i++) {
+						sb.append(contactList.get(i));
+						if (i < contactList.size() - 1) {
+							sb.append(", ");
+						}
+					}
+					sb.append("]");
+					System.out.println(sb);
+				}
+				// Relancer la demande de liste des contacts
+				requestContactList();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		});
+
+		// Démarrer le thread
+		thread.start();
+	}*/
+
+	public void requestContactList() {
+		Thread thread = new Thread(() -> {
+			try {
+				// Envoyer la demande de liste de contacts
+				sendContactListRequest();
+
+				// Recevoir et traiter la réponse du serveur
+				receiveContactList();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		});
+
+		// Démarrer le thread
+		thread.start();
+	}
+
+	private void sendContactListRequest() throws IOException {
+		try (ByteArrayOutputStream bos = new ByteArrayOutputStream();
+			 DataOutputStream dos = new DataOutputStream(bos)) {
+
+			// Type 9 : Demande de liste de contacts
+			dos.writeByte(9);
+
+			// Envoi du paquet au serveur
+			this.sendPacket(0, bos.toByteArray());
+		}
+	}
+
+	private void receiveContactList() throws IOException {
+		try (DataInputStream dis = new DataInputStream(this.getSocket().getInputStream())) {
+			// Lecture de la longueur de la liste des contacts
+			int contactListLength = dis.readInt();
+
+			// Lecture de la liste des contacts
+			List<String> contactList = new ArrayList<>();
+			for (int i = 0; i < contactListLength; i++) {
+				int contactLength = dis.readInt();
+				byte[] contactBytes = new byte[contactLength];
+				dis.readFully(contactBytes);
+				String contact = new String(contactBytes, StandardCharsets.UTF_8);
+				contactList.add(contact);
+			}
+
+			// Affichage de la liste des contacts
+			StringBuilder sb = new StringBuilder();
+			sb.append("Liste des contacts : [");
+			for (int i = 0; i < contactList.size(); i++) {
+				sb.append(contactList.get(i));
+				if (i < contactList.size() - 1) {
+					sb.append(", ");
+				}
+			}
+			sb.append("]");
+			System.out.println(sb);
+		}
+
+		// Relancer la demande de liste des contacts
+		requestContactList();
+	}
+
+
+}
+
+
 	}
 
 	public Packet receivePacket() {
