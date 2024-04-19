@@ -225,7 +225,7 @@ public class ClientMsg {
 		/**
          * Start the receive loop. Has to be called only once.
          */
-	private void receiveLoop() {
+	private void receiveLoop() throws IOException {
 		try {
 			while (s != null && !s.isClosed()) {
 				int sender = dis.readInt();
@@ -288,7 +288,6 @@ public class ClientMsg {
 						notifyMessageListeners(new Packet(sender, dest, data));
 					}
 				}
-			}
 		} catch (IOException e) {
 			// En cas d'erreur, fermer la connexion
 			e.printStackTrace();
