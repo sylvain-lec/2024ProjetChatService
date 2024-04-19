@@ -3,6 +3,7 @@ import fr.uga.miashs.dciss.chatservice.client.ClientMsg;
 import fr.uga.miashs.dciss.chatservice.client.ConnectionListener;
 import fr.uga.miashs.dciss.chatservice.client.MessageListener;
 import fr.uga.miashs.dciss.chatservice.common.Packet;
+import fr.uga.miashs.dciss.chatservice.common.Packet;
 import fr.uga.miashs.dciss.chatservice.server.ServerMsg;
 
 import javax.swing.*;
@@ -483,14 +484,19 @@ public class Chat implements MessageListener, ConnectionListener{
             @Override
             public void actionPerformed(ActionEvent e) {
                 String message = messageInput.getText().trim();
+                // display dialog pour demander le destinataire id
+                String destIdString = JOptionPane.showInputDialog(frame, "Entrez l'ID du destinataire:");
+                int destId = Integer.parseInt(destIdString);
                 if (!message.isEmpty()) {
-                    //clientMsg.sendPacket(destinationId, message.getBytes(StandardCharsets.UTF_8));
-                    chatArea.append("You: " + message + "\n");
+                    clientMsg.sendPacket(destId, message.getBytes(StandardCharsets.UTF_8));
+                    chatArea.append("Vous: " + message + "\n");
                     messageInput.setText(""); // Clear input after sending
+
                 }
             }
         });
         inputPanel.add(sendButton, BorderLayout.EAST);
+
 
         // Add Enter key listener to send messages
 
