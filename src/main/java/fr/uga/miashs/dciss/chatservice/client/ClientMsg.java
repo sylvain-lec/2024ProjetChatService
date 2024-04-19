@@ -185,7 +185,13 @@ public class ClientMsg {
 					identifier = dis.readInt();
 				}
 				// start the receive loop
-				new Thread(() -> receiveLoop()).start();
+				new Thread(() -> {
+                    try {
+                        receiveLoop();
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }).start();
 				notifyConnectionListeners(true);
 
 			} catch (IOException e) {
