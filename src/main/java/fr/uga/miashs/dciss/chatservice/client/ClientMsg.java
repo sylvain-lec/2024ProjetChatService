@@ -371,19 +371,19 @@ public class ClientMsg {
 					System.out.println("\nA qui voulez vous écrire ? ");
 					int dest = Integer.parseInt(sc.nextLine());
 
-					System.out.println("\n Voulez-vous envoyer une image? \n0 : oui\n1 : non");
-					int codeI = Integer.parseInt(sc.nextLine());
-					if (codeI == 0) { // Send an image
-						ByteArrayOutputStream bos = new ByteArrayOutputStream();
-						DataOutputStream dos = new DataOutputStream(bos);
-
-						dos.writeByte(6);
-						System.out.println("Adresse de l'image - format jpg:");
-						String imagePath = sc.nextLine();
-						BufferedImage image = ImageIO.read(new File(imagePath));
-						Packet packet = new Packet(c.getIdentifier(), dest, bos.toByteArray(), image);
-						c.sendPacket(dest, packet.toByteArray());
-					}
+//					System.out.println("\n Voulez-vous envoyer une image? \n0 : oui\n1 : non");
+//					int codeI = Integer.parseInt(sc.nextLine());
+//					if (codeI == 0) { // Send an image
+//						ByteArrayOutputStream bos = new ByteArrayOutputStream();
+//						DataOutputStream dos = new DataOutputStream(bos);
+//
+//						dos.writeByte(6);
+//						System.out.println("Adresse de l'image - format jpg:");
+//						String imagePath = sc.nextLine();
+//						BufferedImage image = ImageIO.read(new File(imagePath));
+//						Packet packet = new Packet(c.getIdentifier(), dest, bos.toByteArray(), image);
+//						c.sendPacket(dest, packet.toByteArray());
+//					}
 
 					System.out.println("\nVotre message ? ");
 					lu = sc.nextLine();
