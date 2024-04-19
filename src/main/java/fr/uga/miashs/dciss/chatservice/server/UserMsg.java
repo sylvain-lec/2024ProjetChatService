@@ -62,7 +62,7 @@ public class UserMsg implements PacketProcessor{
 
 	public String getPassword() { return password; }
 
-	public boolean checkPassword(String password) { return this.password.equals(password); }
+//	public boolean checkPassword(String password) { return this.password.equals(password); }
 
 
 	public boolean removeGroup(GroupMsg g) {
@@ -83,10 +83,10 @@ public class UserMsg implements PacketProcessor{
 	 */
 	public void beforeDelete() {
 		groups.forEach(g->g.getMembers().remove(this));
-
+		
 	}
-
-
+	
+	
 	/*
 	 * METHODS FOR MANAING THE CONNECTION
 	 */
@@ -97,7 +97,7 @@ public class UserMsg implements PacketProcessor{
 		active=true;
 		return true;
 	}
-
+	
 	public void close() {
 		active=false;
 		try {
@@ -110,17 +110,11 @@ public class UserMsg implements PacketProcessor{
 		LOG.info(userId + " deconnected");
 	}
 
-	public boolean isConnected() {
+public boolean isConnected() {
 		return s!=null;
 	}
 
-//	//AUTHENTIFICATION. A ETE MODIFIE
-//	public boolean isConnected() {
-//		return s != null && s.isConnected() && !s.isClosed();
-//	}
-
-
-	// boucle d'envoie
+	// boucle de réception
 	public void receiveLoop() {
 		try {
 			DataInputStream dis = new DataInputStream(s.getInputStream());
@@ -134,14 +128,14 @@ public class UserMsg implements PacketProcessor{
 				// on envoie le paquet à ServerMsg pour qu'il le gère
 				server.processPacket(new Packet(userId,destId,content));
 			}
-
+			
 		} catch (IOException e) {
 			// problem in reading, probably end connection
 			LOG.warning("Connection with client "+userId+" is broken...close it.");
 		}
 		close();
 	}
-
+	
 	// boucle d'envoi
 	public void sendLoop() {
 		Packet p = null;
@@ -158,7 +152,7 @@ public class UserMsg implements PacketProcessor{
 				dos.writeInt(p.data.length);
 				dos.write(p.data);
 				dos.flush();
-
+				
 			}
 		} catch (IOException e) {
 			// remet le paquet dans la file si pb de transmission (connexion terminée)
@@ -170,7 +164,7 @@ public class UserMsg implements PacketProcessor{
 		}
 		//close();
 	}
-
+	
 	/**
 	 * Method for adding a packet to the sending queue
 	 */

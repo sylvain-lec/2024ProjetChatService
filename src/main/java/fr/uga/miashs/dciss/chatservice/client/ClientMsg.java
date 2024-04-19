@@ -17,6 +17,8 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -116,6 +118,15 @@ public class ClientMsg {
 		return identifier;
 	}
 	public String getUsername() { return username; }
+
+	public void setIdentifier(int identifier) {
+		this.identifier = identifier;
+	}
+
+	/**
+	 * sets username client-side, and sends a packet to the server to update the username server-side.
+	 * @param username
+	 */
 	public void setUsername(String username) {
 		this.username = username;
 
@@ -129,69 +140,35 @@ public class ClientMsg {
 			dos.write(username.getBytes(StandardCharsets.UTF_8));
 			dos.flush();
 			sendPacket(0, bos.toByteArray());
-			System.out.println("packet for username update sent to server");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
 
+	/**
+	 * Sets password client side, and sends a packet to the server to update the password server-side.
+	 * @param password
+	 */
 	public void setPassword(String password) {
 		this.password = password;
+
+        //send packet to the server; the server will update the password.
+        //1byte for the type (7), 4bytes (an int) for the length of the password, then the password
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        DataOutputStream dos = new DataOutputStream(bos);
+        try {
+            dos.writeByte(7);
+            dos.writeInt(password.length());
+            dos.write(password.getBytes(StandardCharsets.UTF_8));
+            dos.flush();
+            sendPacket(0, bos.toByteArray());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 	}
 
 	public String getPassword() {
 		return password;
-	}
-
-	public boolean sendLoginRequest(String username, String password) {
-		//DON'T UPDATE USERNAME AND PASSWORD HERE, BC AUTHENTICATION COULD FAIL. instead see receiveLoop()
-		//this.username = username;
-		//this.password = password;
-
-		//send packet to the server; the server will update the username.
-		//1byte for the type (6), 4 bytes for the username length,
-		//then the username, 4bytes for the password length, then the password
-		ByteArrayOutputStream bos = new ByteArrayOutputStream();
-		DataOutputStream dos = new DataOutputStream(bos);
-		try {
-			dos.writeByte(6);
-			dos.writeInt(username.length());
-			dos.write(username.getBytes(StandardCharsets.UTF_8));
-			dos.writeInt(password.length());
-			dos.write(password.getBytes(StandardCharsets.UTF_8));
-			dos.flush();
-			sendPacket(0, bos.toByteArray());
-			//System.out.println("login packet sent from sendLoginRequest() in ClientMsg");
-
-
-//			// READ THE SERVER'S RESPONSE to return a boolean. i'm not sure it's the right place to do it.
-//			int length = dis.readInt();
-//			byte[] data = new byte[length];
-//			dis.readFully(data);
-///* TRACE */	System.out.println("TRACE : data received from server : " + new String(data));
-//			if (data.length > 0) {
-//				// The first byte of the data is the response type
-//				int responseType = data[0]; //PROBLEM : LENGTH 0
-//
-//				if (responseType == 0) { // Authentication failed
-//					System.out.println("Successfully authenticated.");
-//					return true;
-//				} else if (responseType == 1) { // Authentication succeeded
-//					System.out.println("Authentication failed. Please try again.");
-//					return false;
-//				} else {
-//					System.out.println("Received unexpected response type.");
-//					return false;
-//				}
-//			} else { //empty response
-///* TRACE */		System.out.println("ClientMsg received an empty reponse from the server");
-//				return false;
-//			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		return false;
-
 	}
 
 
@@ -202,20 +179,26 @@ public class ClientMsg {
 	 * @throws UnknownHostException
 	 * @throws IOException
 	 */
-	public void startSession() throws UnknownHostException {
+	public void startSession(String password) throws UnknownHostException {
 		if (s == null || s.isClosed()) {
 			try {
 				s = new Socket(serverAddress, serverPort);
 				dos = new DataOutputStream(s.getOutputStream());
 				dis = new DataInputStream(s.getInputStream());
 				dos.writeInt(identifier);
-				//	dos.writeUTF(username);
+				dos.writeUTF(password);
 				dos.flush();
 				if (identifier == 0) {
 					identifier = dis.readInt();
 				}
 				// start the receive loop
-				new Thread(() -> receiveLoop()).start();
+				new Thread(() -> {
+                    try {
+                        receiveLoop();
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }).start();
 				notifyConnectionListeners(true);
 
 			} catch (IOException e) {
@@ -244,13 +227,20 @@ public class ClientMsg {
 			// error, connection closed
 			closeSession();
 		}
-
-	}
+    }
 
 	/**
-	 * Start the receive loop. Has to be called only once.
+	 * Method to send files
 	 */
-	private void receiveLoop() {
+	public void sendFile(int destId, Path filePath) throws IOException {
+		byte[] fileData = Files.readAllBytes(filePath);
+		sendPacket(destId, fileData);
+	}
+
+		/**
+         * Start the receive loop. Has to be called only once.
+         */
+	private void receiveLoop() throws IOException {
 		try {
 			while (s != null && !s.isClosed()) {
 				int sender = dis.readInt();
@@ -260,35 +250,60 @@ public class ClientMsg {
 				dis.readFully(data);
 
 				Packet packet = new Packet(sender, dest, data); // Create a packet to receive an image if there is one
-				BufferedImage image = packet.getImage(); // Get the image from the packet
-				if (image != null) {
-					// TODO: The packet contains an image, send it to the listeners
-					notifyMessageListeners(new Packet(sender, dest, data, image));
-				} else {
-					if (sender == ServerMsg.SERVER_CLIENTID && dest == this.identifier) {
-						ByteBuffer buffer = ByteBuffer.wrap(data);
-						// Suppose que le serveur envoie un byte pour définir le type de réponse.
-						byte responseType = buffer.get();
 
-						if (responseType == 1) { // Si le type de réponse est 1, cela signifie la création de groupe.
-							int groupId = buffer.getInt();
-							System.out.println("Le groupe numéro " + groupId + " a été créé.");
-						}
-						else if (responseType == 10) { //authentication successful
-							System.out.println("You've been successfully authenticated. Type anything to continue.");
-							isAuthenticated = true ;
+				if (sender == ServerMsg.SERVER_CLIENTID && dest == this.identifier) {
+					ByteBuffer buffer = ByteBuffer.wrap(data);
+					// Suppose que le serveur envoie un byte pour définir le type de réponse.
+					byte responseType = buffer.get();
 
-						}
-						else if (responseType == 11) {
-							System.out.println("Authentication failed. Please try again.");
-							isAuthenticated = false ;
-						}
+					if (responseType == 1) { //création de groupe
+						int groupId = buffer.getInt();
+						int lengthMsg = buffer.getInt();
+						byte[] msgBytes = new byte[lengthMsg];
+						buffer.get(msgBytes);
+						String msg = new String(msgBytes, StandardCharsets.UTF_8);
+						System.out.println(msg);
+
+					}
+					else if (responseType == 2 || responseType == 3 || responseType == 4) { //handle group deletion, whether it worked or not
+						int lengthMsg = buffer.getInt();
+						byte[] msgBytes = new byte[lengthMsg];
+						buffer.get(msgBytes);
+						String msg = new String(msgBytes, StandardCharsets.UTF_8);
+						System.out.println(msg);
+					}
+
+					else if (responseType == 9) { //info retrieval upon authentication
+						int usernameLength = buffer.getInt();
+						byte[] usernameBytes = new byte[usernameLength];
+						buffer.get(usernameBytes);
+						String username = new String(usernameBytes, StandardCharsets.UTF_8); //retrieve the username
+						this.username = username; //set the username
+
+						int passwordLength = buffer.getInt();
+						byte[] passwordBytes = new byte[passwordLength];
+						buffer.get(passwordBytes);
+						String password = new String(passwordBytes, StandardCharsets.UTF_8); //retrieve the password
+						this.password = password; //set the password
+					}
+//					else if (responseType == 10) { //authentication successful
+//						System.out.println("You've been successfully authenticated. Type anything to continue.");
+//						//set userId to the userId received in the packet
+//						int newUserId = buffer.getInt();
+//	/* SET HERE	*/		this.identifier = newUserId;
+//						System.out.println("new id : "+ this.getIdentifier());
+//						isAuthenticated = true ;
+//					}
+//					else if (responseType == 11) {
+//						System.out.println("Authentication failed. Please try again.");
+//						isAuthenticated = false ;
+//					}
 
 					} else {
 						notifyMessageListeners(new Packet(sender, dest, data));
 					}
 				}
-			}
+
 		} catch (IOException e) {
 			// En cas d'erreur, fermer la connexion
 			e.printStackTrace();
@@ -306,89 +321,86 @@ public class ClientMsg {
 		notifyConnectionListeners(false);
 	}
 
-
 	public static void main(String[] args) throws UnknownHostException, IOException, InterruptedException {
 		ClientMsg c = new ClientMsg("localhost", 1666);
 
 		// add a dummy listener that print the content of message as a string
 
 		c.addMessageListener(p -> {
-//			String username = c.getUsername();
 			System.out.println(p.srcId + " says to " + p.destId + ": " + new String(p.data));
 		});
 
 		// add a connection listener that exit application when connection closed
 		c.addConnectionListener(active ->  {if (!active) System.exit(0);});
 
-		c.startSession();
 		Scanner sc = new Scanner(System.in);
 
-		// AUTHENTIFICATION
-		String rep = "a" ;
+		/* ----------------- AUTHENTIFICATION ------------------------- */
+		String rep = "b" ;
+		c.isAuthenticated = false ;
 
-		//while the user is trying to authenticate, and is not authenticated
-		while (!rep.equalsIgnoreCase("N") && !c.isAuthenticated) {
-			System.out.println("Voulez vous vous connecter? Y/N");
+		while (!c.isAuthenticated && !rep.equalsIgnoreCase("R")) {
+			//ask to register or authenticate
+			System.out.println("Do you want to authenticate or register as a new member? (A/R)");
 			rep = sc.nextLine();
-			if (rep.equals("Y") || rep.equals("y")) { //the user is trying to authenticate
-				System.out.println("Entrez votre nom d'utilisateur : ");
-				String username = sc.nextLine();
-				System.out.println("Entrez votre mot de passe : ");
+
+			//AUTHENTIFICATION :
+			if (rep.equalsIgnoreCase("A")) {
+				System.out.println("what is your id ?");
+				int id = Integer.parseInt(sc.nextLine());
+				c.identifier = id;
+				System.out.println("Enter your password: ");
 				String password = sc.nextLine();
-				c.sendLoginRequest(username, password);
-				System.out.println(c.getUsername());
-				if (c.isAuthenticated) {
-					c.setUsername(username);
-					break;
-				}
+				c.startSession(password); //prendre en paramètre un mot de passe
+
+				//send packet to retrieve username and password from server
+				c.askInfos();
+				c.isAuthenticated = true ;
+
+			//NEW USER : registers with an id given by the server. username and password chosen by the user
+			} else if (rep.equalsIgnoreCase("R")) {
+				System.out.println("Enter your password: ");
+				String password = sc.nextLine();
+				c.startSession(password);
+				System.out.println("Enter your username: ");
+				String username = sc.nextLine();
+				c.setUsername(username);
+				c.password = password;
+
+				System.out.println("you are now registered as " + c.getUsername() + " with id " + c.getIdentifier());
+				c.isAuthenticated = true ;
 			}
 		}
-		//now, either the user is authenticated, or they chose not to authenticate
+
+		//wait for 0.5s
+		Thread.sleep(500);
+		//now, either the user registered, or the user is authenticated
 		System.out.println("Hello "+ c.getUsername() + "!");
-
-
-
-//		while (!rep.equals("Y") && !rep.equals("N")) {
-//			System.out.println("Voulez vous vous connecter? Y/N");
-//			rep = sc.nextLine();
-//		}
-//		if (rep.equals("Y")) {
-//			System.out.println("Entrez votre nom d'utilisateur : ");
-//			String username = sc.nextLine();
-//			c.setUsername(username);
-//			System.out.println("Entrez votre mot de passe : ");
-//			String password = sc.nextLine();
-//			c.sendLoginRequest(username, password);
-//			System.out.println("Vous êtes " + c.getUsername());
-//
-//		}
-//		else {
-//			System.out.println("\nVous êtes : " + c.getUsername());
-//		}
 
 		String lu = null;
 		while (!"\\quit".equals(lu)) {
 			try {
-				System.out.println("\n" + c.getUsername()+ ", que souhaitez-vous faire? \n0 : envoyer un message\n1 : créer un groupe\n2 : supprimer un groupe\n3 : ajouter un membre à un groupe\n4 : supprimer un membre d'un groupe\n5 : changer de nom\n7 : changer de mot de passe\n8 : Ajouter un contact\n9 : afficher la liste de contacts\n");
+				System.out.println("\n" + c.getUsername()+ ", que souhaitez-vous faire? \n0 : envoyer un message\n1 : créer un groupe\n2 : supprimer un groupe\n3 : ajouter un membre à un groupe\n4 : supprimer un membre d'un groupe\n5 : changer de nom\n7 : changer de mot de passe\n8 : Ajouter un contact\n");
 				int code = Integer.parseInt(sc.nextLine());
 
 				if (code == 0) { //envoyer un msg
 					System.out.println("\nA qui voulez vous écrire ? ");
 					int dest = Integer.parseInt(sc.nextLine());
 
-					System.out.println("\n Voulez-vous envoyer une image? \n0 : oui\n1 : non");
-					int codeI = Integer.parseInt(sc.nextLine());
-					if (codeI == 0) { // Send an image
-						ByteArrayOutputStream bos = new ByteArrayOutputStream();
-						DataOutputStream dos = new DataOutputStream(bos);
+//					System.out.println("\n Voulez-vous envoyer une image? \n0 : oui\n1 : non");
+//					int codeI = Integer.parseInt(sc.nextLine());
+//					if (codeI == 0) { // Send an image
+//						ByteArrayOutputStream bos = new ByteArrayOutputStream();
+//						DataOutputStream dos = new DataOutputStream(bos);
+//
+//						dos.writeByte(6);
+//						System.out.println("Adresse de l'image - format jpg:");
+//						String imagePath = sc.nextLine();
+//						BufferedImage image = ImageIO.read(new File(imagePath));
+//						Packet packet = new Packet(c.getIdentifier(), dest, bos.toByteArray(), image);
+//						c.sendPacket(dest, packet.toByteArray());
+//					}
 
-						dos.writeByte(6);
-						System.out.println("Adresse de l'image - format jpg:");
-						String imagePath = sc.nextLine();
-						BufferedImage image = ImageIO.read(new File(imagePath));
-						Packet packet = new Packet(c.getIdentifier(), dest, bos.toByteArray(), image);
-						c.sendPacket(dest, packet.toByteArray());
-					}
 					System.out.println("\nVotre message ? ");
 					lu = sc.nextLine();
 					c.sendPacket(dest, lu.getBytes());
@@ -396,15 +408,7 @@ public class ClientMsg {
 				}
 
 				else if (code == 1) { //creer un groupe
-					ByteArrayOutputStream bos = new ByteArrayOutputStream();
-					DataOutputStream dos = new DataOutputStream(bos);
-
-					// byte 1 : create group on server
-					dos.writeByte(1);
-
-					//empty int list
 					List<Integer> members = new ArrayList<>();
-
 					int member = 1;
 					// list of members
 					while (member != 0) {
@@ -412,122 +416,70 @@ public class ClientMsg {
 						member = Integer.parseInt(sc.nextLine());
 						members.add(member);
 					}
-					dos.writeInt(members.size()); //nb de membres envoyé dans le paquet
-					//on envoie dans le paquet chaque userId, le sender compris
-					dos.writeInt(c.getIdentifier()); //on envoie le sender
-					for (int i = 0 ; i < members.size() ; i++) {
-						dos.writeInt(members.get(i)); //on envoie tous les autres membres
-					}
-					dos.flush();
-					c.sendPacket(0, bos.toByteArray());
+					c.creationGroupe(members);
 				}
 
 				else if (code == 2) { //supprimer un groupe
-					ByteArrayOutputStream bos = new ByteArrayOutputStream();
-					DataOutputStream dos = new DataOutputStream(bos);
-
-					// byte 2 : delete group on server
-					dos.writeByte(2);
-					// id group
 					System.out.println("quel groupe ?");
-					dos.writeInt(Integer.parseInt(sc.nextLine()));
-					dos.flush();
-					c.sendPacket(0, bos.toByteArray());
+					int gp = Integer.parseInt(sc.nextLine());
+					c.supprimerGroupe(gp);
 				}
 
 				else if (code == 3) { //ajouter un member à un groupe
-					ByteArrayOutputStream bos = new ByteArrayOutputStream();
-					DataOutputStream dos = new DataOutputStream(bos);
-
-					// byte à 3 : ajouter un membre au serveur
-					dos.writeByte(3);
 					System.out.println("\nDans quel groupe voulez-vous ajouter un membre?");
-					int idGroup = Integer.parseInt(sc.nextLine()); // idGroup
-					dos.writeInt(idGroup);
+					int idGroup = Integer.parseInt(sc.nextLine());
 
 					System.out.println("\nQuel utilisateur voulez-vous ajouter ?");
 					int userId = Integer.parseInt(sc.nextLine());
-					dos.writeInt(userId);
-					dos.flush();
-					c.sendPacket(0, bos.toByteArray());
+
+					c.addMember(idGroup, userId);
 				}
 
-				else if (code == 4) { //supprimer un membre d'un groupe
-					ByteArrayOutputStream bos = new ByteArrayOutputStream();
-					DataOutputStream dos = new DataOutputStream(bos);
-
-					dos.writeByte(4); //premier byte à 4 pour supprimer un membre
+				else if (code == 4) { //supprimer un membre d'un
 					System.out.println("\nDans quel groupe voulez-vous supprimer un membre?");
 					int idGroup = Integer.parseInt(sc.nextLine()); // idGroup
-					dos.writeInt(idGroup);
 
 					System.out.println("\nQuel utilisateur voulez-vous supprimer ?");
 					int userId = Integer.parseInt(sc.nextLine());
-					dos.writeInt(userId);
-					dos.flush();
-					c.sendPacket(0, bos.toByteArray());
+
+					c.removeMember(idGroup, userId);
 				}
 
 				else if (code == 5) { //changer de nom
-					System.out.println("\nNouveau nom d'utilisateur : ");
+					System.out.println("\nNew username : ");
 					String newUsername = sc.nextLine();
 					c.setUsername(newUsername);
 					System.out.println("Vous êtes " + c.getUsername());
 				}
 
 				else if (code == 7) { //change password
-					System.out.println("\nSaisissez votre ancien mot de passe : ");
-					String oldPassword = sc.nextLine();
-					//get password associated with the username, without using the server
-					boolean isAuthenticated = c.getPassword().equals(oldPassword);
-					//if the password is correct, the server will ask for the new password
-					//AUTHENTIFICATION
-					if (isAuthenticated) {
-						System.out.println("Mot de passe correct. Nouveau mot de passe : ");
-						String newPassword = sc.nextLine();
-						//send packet to the server; the server will update the password.
-						//1byte for the type (7), 4bytes (an int) for the length of the password, then the password
-						ByteArrayOutputStream bos = new ByteArrayOutputStream();
-						DataOutputStream dos = new DataOutputStream(bos);
-						try {
-							dos.writeByte(7);
-							dos.writeInt(newPassword.length());
-							dos.write(newPassword.getBytes(StandardCharsets.UTF_8));
-							dos.flush();
-							c.sendPacket(0, bos.toByteArray());
-							System.out.println("packet for password update sent to server. depuis ClientMsg");
-						} catch (IOException e) {
-							e.printStackTrace();
-						}
-					} else {
-						System.out.println("Mot de passe non reconnu. Veuillez réessayer.");
-						continue;
-					}
-				} else if (code == 8) { // Ajouter un contact à un utilisateur
-					try {
-						// Création du flux de sortie pour écrire les données du paquet
-						ByteArrayOutputStream bos = new ByteArrayOutputStream();
-						DataOutputStream dos = new DataOutputStream(bos);
+					boolean reussi = c.updatePassword();
 
-						// Type 8 : Ajout de contact sur le serveur
-						dos.writeByte(8);
+                } else if (code == 8) { // Ajouter un contact à un utilisateur
+                    try {
+                        // Création du flux de sortie pour écrire les données du paquet
+                        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                        DataOutputStream dos = new DataOutputStream(bos);
 
-						System.out.println("\nEntrez le nom du contact : ");
-						String contactName = sc.nextLine();
+                        // Type 8 : Ajout de contact sur le serveur
+                        dos.writeByte(8);
 
-						dos.writeInt(contactName.getBytes(StandardCharsets.UTF_8).length);
-						dos.write(contactName.getBytes(StandardCharsets.UTF_8));
-						dos.flush();
+                        System.out.println("\nEntrez le nom du contact : ");
+                        String contactName = sc.nextLine();
 
-						c.sendPacket(0, bos.toByteArray());
-						System.out.println("Packet for adding contact sent to server.");
+                        dos.writeInt(contactName.getBytes(StandardCharsets.UTF_8).length);
+                        dos.write(contactName.getBytes(StandardCharsets.UTF_8));
+                        dos.flush();
 
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-				} else if (code == 9) { // Demander la liste de contacts
-					c.requestContactList();
-					}
+                        c.sendPacket(0, bos.toByteArray());
+                        System.out.println("Packet for adding contact sent to server.");
+
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                } else if (code == 9) { // Demander la liste de contacts
+                    c.requestContactList();
+                }
 
 
 			} catch (InputMismatchException | NumberFormatException e) {
@@ -535,19 +487,171 @@ public class ClientMsg {
 			}
 		}
 
-
-
-		/*
-		 * int id =1+(c.getIdentifier()-1) % 2; System.out.println("send to "+id);
-		 * c.sendPacket(id, "bonjour".getBytes());
-		 *
-		 *
-		 * Thread.sleep(10000);
-		 */
-
 		c.closeSession();
 
 	}
+
+	/**
+	 * Update the password of the user
+	 * packet format (if correct password) : 1byte for the type (7), 4bytes (an int) for the length of the password, then the password
+	 * @return true if the password has been updated, false otherwise
+	 */
+	public boolean updatePassword() {
+		Scanner sc = new Scanner(System.in);
+
+		System.out.println("\nSaisissez votre ancien mot de passe : ");
+		String oldPassword = sc.nextLine();
+		//get password associated with the username, without using the server
+		boolean isAuthenticated = this.getPassword().equals(oldPassword);
+		//if the password is correct, the server will ask for the new password
+		//AUTHENTIFICATION
+		if (isAuthenticated) {
+			System.out.println("Mot de passe correct. Nouveau mot de passe : ");
+			String newPassword = sc.nextLine();
+			//send packet to the server; the server will update the password.
+			//1byte for the type (7), 4bytes (an int) for the length of the password, then the password
+			ByteArrayOutputStream bos = new ByteArrayOutputStream();
+			DataOutputStream dos = new DataOutputStream(bos);
+			try {
+				dos.writeByte(7);
+				dos.writeInt(newPassword.length());
+				dos.write(newPassword.getBytes(StandardCharsets.UTF_8));
+				dos.flush();
+				this.sendPacket(0, bos.toByteArray());
+				System.out.println("Votre mot de passe a été modifié avec succès");
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			this.password = newPassword;
+			return true;
+		} else {
+			System.out.println("Mot de passe non reconnu. Veuillez réessayer.");
+			return false;
+		}
+	}
+
+	/**
+	 * Remove a member from a group on the server
+	 * packet format : 4byte for the type (4), 4bytes for the groupId, 4bytes for the userId
+	 * @param groupId : the id of the group
+	 * @param userId : the id of the user to remove
+	 */
+	public void removeMember(int groupId, int userId) {
+		try {
+		ByteArrayOutputStream bos = new ByteArrayOutputStream();
+		DataOutputStream dos = new DataOutputStream(bos);
+
+		dos.writeByte(4); //premier byte à 4 pour supprimer un membre
+		dos.writeInt(groupId);
+		dos.writeInt(userId);
+		dos.flush();
+		this.sendPacket(0, bos.toByteArray());
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	/**
+	 * Add a member to a group on the server
+	 * packet format : 3byte for the type (3), 4bytes for the groupId, 4bytes for the userId
+	 * @param groupId : the id of the group
+	 * @param userId : the id of the user to add
+	 */
+	public void addMember(int groupId, int userId) {
+		try {
+			ByteArrayOutputStream bos = new ByteArrayOutputStream();
+			DataOutputStream dos = new DataOutputStream(bos);
+
+			dos.writeByte(3);
+			dos.writeInt(groupId);
+			dos.writeInt(userId);
+			dos.flush();
+			this.sendPacket(0, bos.toByteArray());
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	/**
+	 * Delete a group on the server
+	 */
+	public void supprimerGroupe(int idGroup) {
+		try {
+			ByteArrayOutputStream bos = new ByteArrayOutputStream();
+			DataOutputStream dos = new DataOutputStream(bos);
+
+			// byte 2 : delete group on server
+			dos.writeByte(2);
+			// id group
+			dos.writeInt(idGroup);
+			dos.flush();
+			this.sendPacket(0, bos.toByteArray());
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	/**
+	 * Create a group on the server
+	 * packet format : 1byte for the type (1), 4bytes for the number of members, then the list of members
+	 * @param members : list of members to add to the group
+	 */
+	public void creationGroupe(List<Integer> members) {
+		Scanner sc = new Scanner(System.in);
+		ByteArrayOutputStream bos = new ByteArrayOutputStream();
+		DataOutputStream dos = new DataOutputStream(bos);
+		try {
+			dos.writeByte(1);
+			dos.writeInt(members.size()); //nb de membres dans le groupe
+			//on envoie dans le paquet chaque userId, le sender compris
+			dos.writeInt(this.getIdentifier()); //on envoie le sender
+			for (int i = 0 ; i < members.size() ; i++) {
+				dos.writeInt(members.get(i)); //on envoie tous les autres membres
+			}
+			dos.flush();
+			this.sendPacket(0, bos.toByteArray());
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+
+	}
+
+	/**
+	 * Ask the server for the username and password associated with the userId
+	 */
+	public void askInfos() {
+		ByteArrayOutputStream bos = new ByteArrayOutputStream();
+		DataOutputStream dos = new DataOutputStream(bos);
+		try {
+			dos.writeByte(11);
+			dos.writeInt(this.getIdentifier());
+			dos.flush();
+			sendPacket(0, bos.toByteArray());
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+
+	public String getClientInfo() {
+		return "ClientMsg{" +
+				"serverAddress='" + serverAddress + '\'' +
+				", serverPort=" + serverPort +
+				", identifier=" + identifier +
+				", username='" + username + '\'' +
+				", password='" + password + '\'' +
+				'}';
+	}
+
+	public void endSession() {
+		try {
+			if (s != null)
+				s.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+}
 
 		public Socket getSocket() {
 			return s;
