@@ -222,7 +222,9 @@ public class ClientMsg {
 		}
 	}
 
-	// Method to send files using a file path
+	/**
+	 * Method to send files
+	 */
 	public void sendFile(int destId, Path filePath) throws IOException {
 		byte[] fileData = Files.readAllBytes(filePath);
 		sendPacket(destId, fileData);
