@@ -714,19 +714,14 @@ public class ClientMsg {
 }
 
 
-
-
-
 	public Socket getSocket() {
 			return s;
 		}
 
-	public void requestContactList() {
+	/*public void requestContactList() {
 		Thread thread = new Thread(() -> {
-			try {
-
-				ByteArrayOutputStream bos = new ByteArrayOutputStream();
-				DataOutputStream dos = new DataOutputStream(bos);
+			try (ByteArrayOutputStream bos = new ByteArrayOutputStream();
+				 DataOutputStream dos = new DataOutputStream(bos)) {
 
 				// Type 9 : Demande de liste de contacts
 				dos.writeByte(9);
@@ -735,34 +730,32 @@ public class ClientMsg {
 				this.sendPacket(0, bos.toByteArray());
 
 				// Lecture de la réponse du serveur
-				DataInputStream dis = new DataInputStream(this.getSocket().getInputStream());
+				try (DataInputStream dis = new DataInputStream(this.getSocket().getInputStream())) {
 
-				// Lecture de la longueur de la liste des contacts
-				int contactListLength = dis.readInt();
+					// Lecture de la longueur de la liste des contacts
+					int contactListLength = dis.readInt();
 
-				// Lecture de la liste des contacts
-				List<String> contactList = new ArrayList<>();
-				for (int i = 0; i < contactListLength; i++) {
-					int contactLength = dis.readInt();
-					byte[] contactBytes = new byte[contactLength];
-					dis.readFully(contactBytes);
-					String contact = new String(contactBytes, StandardCharsets.UTF_8);
-					contactList.add(contact);
-				}
-				StringBuilder sb = new StringBuilder();
-
-				sb.append("Liste des contacts : [");
-
-				for (int i = 0; i < contactList.size(); i++) {
-					sb.append(contactList.get(i));
-
-					if (i < contactList.size() - 1) {
-						sb.append(", ");
+					// Lecture de la liste des contacts
+					List<String> contactList = new ArrayList<>();
+					for (int i = 0; i < contactListLength; i++) {
+						int contactLength = dis.readInt();
+						byte[] contactBytes = new byte[contactLength];
+						dis.readFully(contactBytes);
+						String contact = new String(contactBytes, StandardCharsets.UTF_8);
+						contactList.add(contact);
 					}
-				}
-				sb.append("]");
-				System.out.println(sb);
 
+					StringBuilder sb = new StringBuilder();
+					sb.append("Liste des contacts : [");
+					for (int i = 0; i < contactList.size(); i++) {
+						sb.append(contactList.get(i));
+						if (i < contactList.size() - 1) {
+							sb.append(", ");
+						}
+					}
+					sb.append("]");
+					System.out.println(sb);
+				}
 				// Relancer la demande de liste des contacts
 				requestContactList();
 			} catch (IOException e) {
@@ -772,7 +765,69 @@ public class ClientMsg {
 
 		// Démarrer le thread
 		thread.start();
+	}*/
+
+	public void requestContactList() {
+		Thread thread = new Thread(() -> {
+			try {
+				// Envoyer la demande de liste de contacts
+				sendContactListRequest();
+
+				// Recevoir et traiter la réponse du serveur
+				receiveContactList();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		});
+
+		// Démarrer le thread
+		thread.start();
 	}
+
+	private void sendContactListRequest() throws IOException {
+		try (ByteArrayOutputStream bos = new ByteArrayOutputStream();
+			 DataOutputStream dos = new DataOutputStream(bos)) {
+
+			// Type 9 : Demande de liste de contacts
+			dos.writeByte(9);
+
+			// Envoi du paquet au serveur
+			this.sendPacket(0, bos.toByteArray());
+		}
+	}
+
+	private void receiveContactList() throws IOException {
+		try (DataInputStream dis = new DataInputStream(this.getSocket().getInputStream())) {
+			// Lecture de la longueur de la liste des contacts
+			int contactListLength = dis.readInt();
+
+			// Lecture de la liste des contacts
+			List<String> contactList = new ArrayList<>();
+			for (int i = 0; i < contactListLength; i++) {
+				int contactLength = dis.readInt();
+				byte[] contactBytes = new byte[contactLength];
+				dis.readFully(contactBytes);
+				String contact = new String(contactBytes, StandardCharsets.UTF_8);
+				contactList.add(contact);
+			}
+
+			// Affichage de la liste des contacts
+			StringBuilder sb = new StringBuilder();
+			sb.append("Liste des contacts : [");
+			for (int i = 0; i < contactList.size(); i++) {
+				sb.append(contactList.get(i));
+				if (i < contactList.size() - 1) {
+					sb.append(", ");
+				}
+			}
+			sb.append("]");
+			System.out.println(sb);
+		}
+
+		// Relancer la demande de liste des contacts
+		requestContactList();
+	}
+
 
 }
 
