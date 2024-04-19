@@ -53,7 +53,7 @@ public class Chat implements MessageListener, ConnectionListener{
     public Chat() {
         // REGISTER to the server
         clientMsg = new ClientMsg("localhost", 1666);
-        clientMsg.addMessageListener(this);
+        clientMsg.notifyMessageListeners(this);
         clientMsg.addConnectionListener(this);
 //        clientMsg.addMessageListener((MessageListener) this);
 //        clientMsg.addConnectionListener((ConnectionListener) this);
@@ -167,19 +167,7 @@ public class Chat implements MessageListener, ConnectionListener{
                 JOptionPane.showMessageDialog(frame, "Le groupe a été créé avec succès.", "Succès", JOptionPane.INFORMATION_MESSAGE);
 
 
-                // Create the group with the list of members
-//                if (!members.isEmpty()) {
-//                    clientMsg.creationGroupe(members);
-//                    JOptionPane.showMessageDialog(frame, "Le groupe a été créé avec succès.", "Succès", JOptionPane.INFORMATION_MESSAGE);
-//                }
-//
-//                String memberString = JOptionPane.showInputDialog(frame, "Ajoutez un membre :");
-//                if (groupIdString != null && !groupIdString.trim().isEmpty()) {
-//
-//                    clientMsg.creationGroupe();
-//                    JOptionPane.showMessageDialog(frame, "Le groupe \"" + groupIdString + "\" a été créé avec succès.", "Succès", JOptionPane.INFORMATION_MESSAGE);
-//
-//                }
+
             }
 
         });
@@ -187,8 +175,8 @@ public class Chat implements MessageListener, ConnectionListener{
             @Override
             public void actionPerformed(ActionEvent e) {
                 String groupIdString = JOptionPane.showInputDialog(frame, "Entrez l'ID du groupe:");
-                if (groupIdString != null && !groupIdString.trim().isEmpty()) {
-                    int groupId = Integer.parseInt(groupIdString);
+                int groupId = Integer.parseInt(groupIdString);
+                if (!groupIdString.trim().isEmpty()) {
                     clientMsg.supprimerGroupe(groupId);
                     JOptionPane.showMessageDialog(frame, "Le groupe \"" + groupIdString + "\" a été supprimé avec succès.", "Succès", JOptionPane.INFORMATION_MESSAGE);
 
@@ -205,7 +193,7 @@ public class Chat implements MessageListener, ConnectionListener{
                         int groupId = Integer.parseInt(groupIdString);
                         int userId = Integer.parseInt(userIdString);
                         clientMsg.addMember(groupId, userId);
-                        JOptionPane.showMessageDialog(frame, "Le groupe \"" + groupId + "\" a ajouté" +userId+"avec succès.", "Succès", JOptionPane.INFORMATION_MESSAGE);
+                        JOptionPane.showMessageDialog(frame, "Le groupe \"" + groupId + "\" a ajouté" +userId+" avec succès.", "Succès", JOptionPane.INFORMATION_MESSAGE);
 
                     } catch (NumberFormatException ex) {
                         JOptionPane.showMessageDialog(frame, "Invalid input. Please enter a valid integer for group ID and user ID.");
@@ -282,55 +270,6 @@ public class Chat implements MessageListener, ConnectionListener{
 
         frame.validate();
         frame.repaint();    }
-   /* private void createGroup(String groupName) throws IOException {
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        DataOutputStream dos = new DataOutputStream(bos);
-        dos.writeUTF(groupName);
-        clientMsg.sendPacket(1, bos.toByteArray());
-        dos.close();
-        bos.close();
-        contactListModel.addElement(groupName);
-    }*/
-    /*private void addContactToUser() {
-        String contactIdString = JOptionPane.showInputDialog(frame, "Enter contact's ID:");
-        String contactName = JOptionPane.showInputDialog(frame, "Enter contact's name:");
-        if (contactIdString != null && !contactIdString.trim().isEmpty() && contactName != null && !contactName.trim().isEmpty()) {
-            int contactId = Integer.parseInt(contactIdString);
-            try {
-                clientMsg.addContact(contactId, contactName);
-                JOptionPane.showMessageDialog(frame, "Contact added successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
-            } catch (IOException ex) {
-                ex.printStackTrace();
-                JOptionPane.showMessageDialog(frame, "Error while adding contact.", "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        }
-    }
-
-    private void changeUserUsername() {
-        String newUsername = JOptionPane.showInputDialog(frame, "Enter your new username:");
-        if (newUsername != null && !newUsername.trim().isEmpty()) {
-            try {
-                clientMsg.changeUsername(newUsername);
-                JOptionPane.showMessageDialog(frame, "Username changed successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
-            } catch (IOException ex) {
-                ex.printStackTrace();
-                JOptionPane.showMessageDialog(frame, "Error while changing username.", "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        }
-    }
-
-    private void changeUserPassword() {
-        String newPassword = JOptionPane.showInputDialog(frame, "Enter your new password:");
-        if (newPassword != null && !newPassword.trim().isEmpty()) {
-            try {
-                clientMsg.changePassword(clientMsg.getPassword(), newPassword);
-                JOptionPane.showMessageDialog(frame, "Password changed successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
-            } catch (IOException ex) {
-                ex.printStackTrace();
-                JOptionPane.showMessageDialog(frame, "Error while changing password.", "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        }
-    }*/
 
 
 
@@ -406,24 +345,6 @@ public class Chat implements MessageListener, ConnectionListener{
                 frame.removeAll();
                 JOptionPane.showMessageDialog(frame, "Vous avez Logout.", "Logout Succèss", JOptionPane.INFORMATION_MESSAGE);
                 //remove all
-//                clientMsg = new ClientMsg("localhost", 1666);
-//////        clientMsg.addMessageListener((MessageListener) this);
-////        clientMsg.addConnectionListener((ConnectionListener) this);
-//                String password = JOptionPane.showInputDialog(frame, "Enter your password:");
-//                try {
-//                    clientMsg.startSession(password);
-//                    //ask the client to choose a username
-//                    String username = JOptionPane.showInputDialog(frame, "Enter your username:");
-//                    clientMsg.setUsername(username);
-//                    //print somewhere the userid, username and password
-//                    System.out.println("User ID: " + clientMsg.getIdentifier() + ", Username: " + clientMsg.getUsername() + ", Password: " + password);
-//                } catch (UnknownHostException e) {
-//                    throw new RuntimeException(e);
-//                }
-//
-//                initializeUI();
-//                customizeUIComponents();
-//                initializeButtons();
 
             }
 
@@ -484,14 +405,15 @@ public class Chat implements MessageListener, ConnectionListener{
             @Override
             public void actionPerformed(ActionEvent e) {
                 String message = messageInput.getText().trim();
-                // display dialog pour demander le destinataire id
-                String destIdString = JOptionPane.showInputDialog(frame, "Entrez l'ID du destinataire:");
-                int destId = Integer.parseInt(destIdString);
                 if (!message.isEmpty()) {
+                    // Ask for the recipient's ID
+                    String destIdString = JOptionPane.showInputDialog(frame, "Enter the recipient ID:");
+                    int destId = Integer.parseInt(destIdString);
+                    // Send the packet
                     clientMsg.sendPacket(destId, message.getBytes(StandardCharsets.UTF_8));
-                    chatArea.append("Vous: " + message + "\n");
-                    messageInput.setText(""); // Clear input after sending
-
+                    // Display the sent message on the sender's own chat area
+                    chatArea.append("You: " + message + "\n");
+                    messageInput.setText(""); // Clear the input field
                 }
             }
         });
@@ -517,27 +439,22 @@ public class Chat implements MessageListener, ConnectionListener{
         frame.add(splitPane);
         frame.setVisible(true);
     }
+    public void appendMessage(JTextArea screen, String message) {
+        screen.append(message + "\n");
+    }
 
-    /*private void sendMessage() {
-        String message = messageInput.getText().trim();
-        if (!message.isEmpty()) {
-            chatArea.append("Vous: " + message + "\n");  // Display the message in the chat area
-            messageInput.setText("");  // Clear the text input field
-            this.clientMsg = new ClientMsg("localhost", 1666);
-            try {
-                clientMsg.startSession();
-            } catch (UnknownHostException e) {
-                e.printStackTrace();
-                return;
-            }
-            int dest = 0;
-            clientMsg.sendPacket(dest, message.getBytes());
-            initializeUI();
-            customizeUIComponents();
-            initializeButtons();
-
+    public void receiveNewMessage(Packet p) {
+        SwingUtilities.invokeLater(() -> {
+            String message = "From " + p.srcId + ": " + new String(p.data, StandardCharsets.UTF_8);
+            appendMessage(chatArea, message);
+        });
+    }
+    public void checkForIncomingPackets(){
+        while (true) {
+            Packet p = clientMsg.receivePacket();
+            receiveNewMessage(p);
         }
-    }*/
+    }
 
     private void customizeUIComponents() {
         // Personalization of the side bar
@@ -572,62 +489,21 @@ public class Chat implements MessageListener, ConnectionListener{
 
     @Override
     public void messageReceived(Packet p) {
-        try {
-        DataInputStream dis = new DataInputStream(s.getInputStream());
-
-            while (s != null && !s.isClosed()) {
-                int sender = dis.readInt();
-                int dest = dis.readInt();
-                int length = dis.readInt();
-                byte[] data = new byte[length];
-                dis.readFully(data);
-
-                Packet packet = new Packet(sender, dest, data); // Create a packet to receive an image if there is one
-
-                if (sender == ServerMsg.SERVER_CLIENTID && dest == clientMsg.getIdentifier()) {
-                    ByteBuffer buffer = ByteBuffer.wrap(data);
-                    // Suppose que le serveur envoie un byte pour définir le type de réponse.
-                    byte responseType = buffer.get();
-
-                    if (responseType == 1) { //création de groupe
-                        int groupId = buffer.getInt();
-                        int lengthMsg = buffer.getInt();
-                        byte[] msgBytes = new byte[lengthMsg];
-                        buffer.get(msgBytes);
-                        String msg = new String(msgBytes, StandardCharsets.UTF_8);
-                        System.out.println(msg);
-
-                    }
-                    else if (responseType == 2 || responseType == 3 || responseType == 4) { //handle group deletion, whether it worked or not
-                        int lengthMsg = buffer.getInt();
-                        byte[] msgBytes = new byte[lengthMsg];
-                        buffer.get(msgBytes);
-                        String msg = new String(msgBytes, StandardCharsets.UTF_8);
-                        System.out.println(msg);
-                    }
-
-                    else if (responseType == 9) { //info retrieval upon authentication
-                        int usernameLength = buffer.getInt();
-                        byte[] usernameBytes = new byte[usernameLength];
-                        buffer.get(usernameBytes);
-                        String username = new String(usernameBytes, StandardCharsets.UTF_8); //retrieve the username
-                    //    this.username = username; //set the username
-
-                        int passwordLength = buffer.getInt();
-                        byte[] passwordBytes = new byte[passwordLength];
-                        buffer.get(passwordBytes);
-                        String password = new String(passwordBytes, StandardCharsets.UTF_8); //retrieve the password
-                     //   this.password = password; //set the password
-                    }
-                } else {
-                 //   notifyMessageListeners(new Packet(sender, dest, data));
-                }
-            }
-        } catch (IOException e) {
-            // En cas d'erreur, fermer la connexion
-            e.printStackTrace();
-        }
+        SwingUtilities.invokeLater(() -> {
+            String message = new String(p.data, StandardCharsets.UTF_8);
+            chatArea.append("From " + p.srcId + ": " + message + "\n");
+        });
     }
+
+
+    protected void notifyMessageListeners(Packet p) {
+        MessageListener[] messageListeners = new MessageListener[0];
+        for (MessageListener listener : messageListeners) {
+            listener.messageReceived(p);
+        }
+
+    }
+
 
     // Custom renderer for JList
     class CustomCellRenderer extends DefaultListCellRenderer {

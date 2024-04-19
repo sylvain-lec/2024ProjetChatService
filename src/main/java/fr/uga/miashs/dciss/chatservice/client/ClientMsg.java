@@ -20,6 +20,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import fr.uga.miashs.dciss.chatservice.common.Packet;
@@ -73,6 +74,8 @@ public class ClientMsg {
 		cListeners = new ArrayList<>();
 		this.username = username;
 		this.password = password;
+		mListeners = new CopyOnWriteArrayList<>(); // Initialize it as a thread-safe list
+
 	}
 
 	/**
@@ -92,13 +95,14 @@ public class ClientMsg {
 	 *
 	 * @param l
 	 */
-	public void addMessageListener(MessageListener l) {
+	public void notifyMessageListeners(MessageListener l) {
 		if (l != null)
 			mListeners.add(l);
 	}
 	protected void notifyMessageListeners(Packet p) {
-		mListeners.forEach(x -> x.messageReceived(p));
-	}
+		for (MessageListener listener : mListeners) {
+			listener.messageReceived(p);
+		}	}
 
 	/**
 	 * Register a ConnectionListener to the client. It will be notified if the connection  start or ends.
@@ -246,7 +250,9 @@ public class ClientMsg {
 				byte[] data = new byte[length];
 				dis.readFully(data);
 
-				Packet packet = new Packet(sender, dest, data); // Create a packet to receive an image if there is one
+
+				Packet p = new Packet(sender, dest, data); // Create a packet to receive an image if there is one
+				notifyMessageListeners(p);
 
 				if (sender == ServerMsg.SERVER_CLIENTID && dest == this.identifier) {
 					ByteBuffer buffer = ByteBuffer.wrap(data);
@@ -322,7 +328,7 @@ public class ClientMsg {
 
 		// add a dummy listener that print the content of message as a string
 
-		c.addMessageListener(p -> {
+		c.notifyMessageListeners(p -> {
 			System.out.println(p.srcId + " says to " + p.destId + ": " + new String(p.data));
 		});
 
@@ -644,6 +650,20 @@ public class ClientMsg {
 				s.close();
 		} catch (IOException e) {
 			e.printStackTrace();
+		}
+	}
+
+	public Packet receivePacket() {
+		try {
+			int sender = dis.readInt();
+			int dest = dis.readInt();
+			int length = dis.readInt();
+			byte[] data = new byte[length];
+			dis.readFully(data);
+			return new Packet(sender, dest, data);
+		} catch (IOException e) {
+			e.printStackTrace();
+			return null;
 		}
 	}
 }
