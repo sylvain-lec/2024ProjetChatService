@@ -189,6 +189,7 @@ public class ServerMsg {
 		}
 	}
 
+
 	public void stop() {
 		started = false;
 		try {
@@ -200,10 +201,19 @@ public class ServerMsg {
 		}
 	}
 
+
+	public void sendPacketToUser(int userId, byte[] array) {
+		UserMsg user = getUser(userId);
+			if (user != null) {
+                user.sendPacket(array);
+                LOG.info("Packet sent to user " + userId);
+            } else {
+				LOG.warning("User with ID " + userId + " not found. Unable to send packet.");
+			}
+		}
 	public static void main(String[] args) throws IOException {
 		ServerMsg s = new ServerMsg(1666);
 		s.start();
 	}
+	}
 
-
-}

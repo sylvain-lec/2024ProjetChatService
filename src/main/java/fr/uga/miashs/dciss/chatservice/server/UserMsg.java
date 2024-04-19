@@ -21,18 +21,18 @@ import java.util.*;
 
 public class UserMsg implements PacketProcessor{
 	private final static Logger LOG = Logger.getLogger(UserMsg.class.getName());
-	
+
 	private int userId;
 	private String username;
 	private String password;
 
-	private Map<Integer, String> contacts;
+	private List<String> contacts;
 	private Set<GroupMsg> groups;
-	
+
 	private ServerMsg server;
 	private transient Socket s;
 	private transient boolean active;
-	
+
 	private BlockingQueue<Packet> sendQueue;
 
 	/**
@@ -48,11 +48,11 @@ public class UserMsg implements PacketProcessor{
 		active=false;
 		sendQueue = new LinkedBlockingQueue<>();
 		groups = Collections.synchronizedSet(new HashSet<>());
-		contacts = new HashMap<>();
+		contacts = new ArrayList<>();
 		this.username = username;
 		this.password = password;
 	}
-	
+
 	public int getId() {
 		return userId;
 	}
@@ -64,7 +64,7 @@ public class UserMsg implements PacketProcessor{
 
 	public boolean checkPassword(String password) { return this.password.equals(password); }
 
-	
+
 	public boolean removeGroup(GroupMsg g) {
 		if (groups.remove(g)) {
 			g.removeMember(this);
@@ -72,21 +72,21 @@ public class UserMsg implements PacketProcessor{
 		}
 		return false;
 	}
-	
+
 	// to be used carrefully, do not add groups directly
 	protected Set<GroupMsg> getGroups() {
 		return groups;
 	}
-	
+
 	/*
 	 * This method has to be called before removing a group in order to clean membership.
 	 */
 	public void beforeDelete() {
 		groups.forEach(g->g.getMembers().remove(this));
-		
+
 	}
-	
-	
+
+
 	/*
 	 * METHODS FOR MANAING THE CONNECTION
 	 */
@@ -97,7 +97,7 @@ public class UserMsg implements PacketProcessor{
 		active=true;
 		return true;
 	}
-	
+
 	public void close() {
 		active=false;
 		try {
@@ -110,7 +110,7 @@ public class UserMsg implements PacketProcessor{
 		LOG.info(userId + " deconnected");
 	}
 
-public boolean isConnected() {
+	public boolean isConnected() {
 		return s!=null;
 	}
 
@@ -119,7 +119,7 @@ public boolean isConnected() {
 //		return s != null && s.isConnected() && !s.isClosed();
 //	}
 
-	
+
 	// boucle d'envoie
 	public void receiveLoop() {
 		try {
@@ -134,14 +134,14 @@ public boolean isConnected() {
 				// on envoie le paquet à ServerMsg pour qu'il le gère
 				server.processPacket(new Packet(userId,destId,content));
 			}
-			
+
 		} catch (IOException e) {
 			// problem in reading, probably end connection
 			LOG.warning("Connection with client "+userId+" is broken...close it.");
 		}
 		close();
 	}
-	
+
 	// boucle d'envoi
 	public void sendLoop() {
 		Packet p = null;
@@ -158,7 +158,7 @@ public boolean isConnected() {
 				dos.writeInt(p.data.length);
 				dos.write(p.data);
 				dos.flush();
-				
+
 			}
 		} catch (IOException e) {
 			// remet le paquet dans la file si pb de transmission (connexion terminée)
@@ -170,7 +170,7 @@ public boolean isConnected() {
 		}
 		//close();
 	}
-	
+
 	/**
 	 * Method for adding a packet to the sending queue
 	 */
@@ -184,13 +184,48 @@ public boolean isConnected() {
 	}
 
 	;
-	void addContact(int contactId, String contactName) {
-		contacts.put(contactId, contactName);
-		LOG.info("Contact added successfully for user with ID: " + userId + ", contact ID: " + contactId + ", contact Name: " + contactName);
+	void addContact(String contactName) {
+		contacts.add(contactName);
+		LOG.info("Contact added successfully for user with ID: " + userId + " contact Name: " + contactName);
+	}
+
+
+	public List<String> getContacts() {
+
+			return contacts;
+		}
+
+	public void sendPacket(byte[] array) {
+		if (s != null && s.isConnected()) {
+			try {
+				// Construire le tableau de bytes avec les contacts
+				String contactListStr = Arrays.toString(contacts.toArray());
+				byte[] contactListBytes = contactListStr.getBytes();
+
+				//ByteArrayOutputStream contactBytesStream = new ByteArrayOutputStream();
+
+                // Concaténer le tableau de bytes des contacts avec le tableau de bytes du paquet
+				byte[] combinedArray = new byte[array.length + contactListBytes.length];
+				System.arraycopy(array, 0, combinedArray, 0, array.length);
+				System.arraycopy(contactListBytes, 0, combinedArray, array.length, contactListBytes.length);
+
+				// Envoi du paquet avec la liste des contacts
+				DataOutputStream dos = new DataOutputStream(s.getOutputStream());
+				dos.writeInt(userId); // Envoi l'identifiant de l'utilisateur
+				dos.writeInt(0); // Envoi l'identifiant du serveur
+				dos.writeInt(combinedArray.length); // Envoi la taille des données
+				dos.write(combinedArray); // Envoi les données
+				dos.flush(); // Vide le tampon de sortie
+				LOG.info("Packet sent to user " + userId);
+			} catch (IOException e) {
+				LOG.warning("Failed to send packet to user " + userId + ": " + e.getMessage());
+			}
+		} else {
+			LOG.warning("User with ID " + userId + " is not connected. Unable to send packet.");
+		}
+
 	}
 
 
 }
-
-
 

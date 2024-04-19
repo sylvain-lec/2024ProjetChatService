@@ -369,7 +369,7 @@ public class ClientMsg {
 		String lu = null;
 		while (!"\\quit".equals(lu)) {
 			try {
-				System.out.println("\n" + c.getUsername()+ ", que souhaitez-vous faire? \n0 : envoyer un message\n1 : créer un groupe\n2 : supprimer un groupe\n3 : ajouter un membre à un groupe\n4 : supprimer un membre d'un groupe\n5 : changer de nom\n7 : changer de mot de passe\n8 : Ajouter un contact\n");
+				System.out.println("\n" + c.getUsername()+ ", que souhaitez-vous faire? \n0 : envoyer un message\n1 : créer un groupe\n2 : supprimer un groupe\n3 : ajouter un membre à un groupe\n4 : supprimer un membre d'un groupe\n5 : changer de nom\n7 : changer de mot de passe\n8 : Ajouter un contact\n9 : afficher la liste de contacts\n");
 				int code = Integer.parseInt(sc.nextLine());
 
 				if (code == 0) { //envoyer un msg
@@ -503,30 +503,31 @@ public class ClientMsg {
 						System.out.println("Mot de passe non reconnu. Veuillez réessayer.");
 						continue;
 					}
-				} else if (code == 8) { // ajouter contact à un utilisateur
-					ByteArrayOutputStream bos = new ByteArrayOutputStream();
-					DataOutputStream dos = new DataOutputStream(bos);
-
-					// Type 8 : Ajout de contact sur le serveur
-					dos.writeByte(8);
-
-					// Demander à l'utilisateur les informations sur le contact à ajouter
-					System.out.println("\nEntrez l'identifiant du contact : ");
-					int contactId = Integer.parseInt(sc.nextLine());
-					System.out.println("\nEntrez le nom du contact : ");
-					String contactName = sc.nextLine();
+				} else if (code == 8) { // Ajouter un contact à un utilisateur
 					try {
-						dos.writeInt(contactId);
+						// Création du flux de sortie pour écrire les données du paquet
+						ByteArrayOutputStream bos = new ByteArrayOutputStream();
+						DataOutputStream dos = new DataOutputStream(bos);
+
+						// Type 8 : Ajout de contact sur le serveur
+						dos.writeByte(8);
+
+						System.out.println("\nEntrez le nom du contact : ");
+						String contactName = sc.nextLine();
+
 						dos.writeInt(contactName.getBytes(StandardCharsets.UTF_8).length);
 						dos.write(contactName.getBytes(StandardCharsets.UTF_8));
 						dos.flush();
 
 						c.sendPacket(0, bos.toByteArray());
 						System.out.println("Packet for adding contact sent to server.");
+
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
-				}
+				} else if (code == 9) { // Demander la liste de contacts
+					c.requestContactList();
+					}
 
 
 			} catch (InputMismatchException | NumberFormatException e) {
@@ -548,6 +549,63 @@ public class ClientMsg {
 
 	}
 
+		public Socket getSocket() {
+			return s;
+		}
 
+	public void requestContactList() {
+		Thread thread = new Thread(() -> {
+			try {
+
+				ByteArrayOutputStream bos = new ByteArrayOutputStream();
+				DataOutputStream dos = new DataOutputStream(bos);
+
+				// Type 9 : Demande de liste de contacts
+				dos.writeByte(9);
+
+				// Envoi du paquet au serveur
+				this.sendPacket(0, bos.toByteArray());
+
+				// Lecture de la réponse du serveur
+				DataInputStream dis = new DataInputStream(this.getSocket().getInputStream());
+
+				// Lecture de la longueur de la liste des contacts
+				int contactListLength = dis.readInt();
+
+				// Lecture de la liste des contacts
+				List<String> contactList = new ArrayList<>();
+				for (int i = 0; i < contactListLength; i++) {
+					int contactLength = dis.readInt();
+					byte[] contactBytes = new byte[contactLength];
+					dis.readFully(contactBytes);
+					String contact = new String(contactBytes, StandardCharsets.UTF_8);
+					contactList.add(contact);
+				}
+				StringBuilder sb = new StringBuilder();
+
+				sb.append("Liste des contacts : [");
+
+				for (int i = 0; i < contactList.size(); i++) {
+					sb.append(contactList.get(i));
+
+					if (i < contactList.size() - 1) {
+						sb.append(", ");
+					}
+				}
+				sb.append("]");
+				System.out.println(sb);
+
+				// Relancer la demande de liste des contacts
+				requestContactList();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		});
+
+		// Démarrer le thread
+		thread.start();
+	}
 
 }
+
+

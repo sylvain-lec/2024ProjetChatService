@@ -1,7 +1,15 @@
 package fr.uga.miashs.dciss.chatservice.gui;
+import fr.uga.miashs.dciss.chatservice.client.ClientMsg;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 import javax.swing.ImageIcon;
 import javax.swing.text.*;
 
@@ -24,8 +32,20 @@ public class Chat {
     private JComboBox<String> profileMenu;
     private JButton addContactButton;
     private JButton createGroupButton;
+    private ClientMsg clientMsg;
+    private JButton attachButton;
+
 
     public Chat() {
+        try {
+            // Assume Server Address and Port are correctly provided
+            clientMsg = new ClientMsg("localhost", 1666);
+            clientMsg.startSession();
+        } catch (IOException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Failed to connect to the server.", "Connection Error", JOptionPane.ERROR_MESSAGE);
+            // Consider disabling functionality or closing the application if the connection is essential
+        }
         initializeUI();
         customizeUIComponents();
         initializeButtons();
@@ -38,22 +58,40 @@ public class Chat {
         addContactButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String contactName = JOptionPane.showInputDialog(frame, "Entrez nom de contact:");
-                if (contactName != null && !contactName.trim().isEmpty()) {
-                    contactListModel.addElement(contactName);
-                }
+
+                String contactName = JOptionPane.showInputDialog(frame, "Entrez le nom du contact : ");
+
+                addContact(contactName);
             }
         });
+
+
 
         createGroupButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 String groupName = JOptionPane.showInputDialog(frame, "Entrez nom de groupe:");
                 if (groupName != null && !groupName.trim().isEmpty()) {
-                    System.out.println("Groupe a été créé: " + groupName);
+                    try {
+                        createGroup(groupName);
+                        System.out.println("Le groupe \"" + groupName + "\" a été créé avec succès.");
+                        JOptionPane.showMessageDialog(frame, "Le groupe \"" + groupName + "\" a été créé avec succès.", "Succès", JOptionPane.INFORMATION_MESSAGE);
+
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                        JOptionPane.showMessageDialog(frame, "Erreur lors de la création du groupe.", "Erreur", JOptionPane.ERROR_MESSAGE);
+                    }
+
+                    // Create a packet with necessary information
+                    // Send the packet to the server to create a group
+                    // Wait for the server's response
+                    // If the server successfully created a group
+                    // Add the group name to the contactListModel
                 }
             }
+
         });
+
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         buttonPanel.add(addContactButton);
@@ -64,6 +102,45 @@ public class Chat {
 
         frame.validate();
         frame.repaint();
+
+        attachButton = new JButton("Joindre");
+        attachButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                JFileChooser fileChooser = new JFileChooser();
+                int result = fileChooser.showOpenDialog(frame);
+                if (result == JFileChooser.APPROVE_OPTION) {
+                    File selectedFile = fileChooser.getSelectedFile();
+                    // Vous pouvez ici traiter le fichier sélectionné, par exemple l'envoyer au serveur
+                    // Assurez-vous d'implémenter la logique pour envoyer le fichier au serveur
+                    // et de l'afficher dans la zone de chat, si nécessaire
+                    chatArea.append("Fichier joint: " + selectedFile.getName() + "\n");
+                }
+            }
+        });
+        // Création d'un JPanel pour contenir le bouton "Joindre"
+        JPanel attachButtonPanel = new JPanel();
+        attachButtonPanel.add(attachButton);
+
+        // Ajout du JPanel contenant le bouton "Joindre" au topPanel
+        rightTopPanel.add(attachButtonPanel);
+
+        // Mise à jour de l'interface utilisateur
+        frame.validate();
+        frame.repaint();
+    }
+
+
+
+    private void createGroup(String groupName) throws IOException {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        DataOutputStream dos = new DataOutputStream(bos);
+        dos.writeUTF(groupName);
+        clientMsg.sendPacket(0, bos.toByteArray());  // Send to server (assuming '0' might be a special ID for commands or server itself)
+        dos.close();
+        bos.close();
+        contactListModel.addElement(groupName);
+
     }
 
     private void initializeUI() {
@@ -75,7 +152,7 @@ public class Chat {
         topPanel = new JPanel(new BorderLayout());
         leftTopPanel = new JPanel();
         searchField = new PlaceholderTextField(20);
-        searchField.setFocusable(false);
+        //searchField.setFocusable(false);
         searchField.setPlaceholder("Rechercher...");
         leftTopPanel.add(searchField);
 
@@ -188,7 +265,19 @@ public class Chat {
         if (!message.isEmpty()) {
             chatArea.append("Vous: " + message + "\n");  // Display the message in the chat area
             messageInput.setText("");  // Clear the text input field
-            // Here, send the message to the server in a real application
+            this.clientMsg = new ClientMsg("localhost", 1666);
+            try {
+                clientMsg.startSession();
+            } catch (UnknownHostException e) {
+                e.printStackTrace();
+                return;
+            }
+            int dest = 0;
+            clientMsg.sendPacket(dest, message.getBytes());
+            initializeUI();
+            customizeUIComponents();
+            initializeButtons();
+
         }
     }
 
@@ -306,4 +395,3 @@ public class Chat {
         });
     }
 }
-
