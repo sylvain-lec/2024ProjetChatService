@@ -189,7 +189,13 @@ public class ClientMsg {
 					identifier = dis.readInt();
 				}
 				// start the receive loop
-				new Thread(() -> receiveLoop()).start();
+				new Thread(() -> {
+                    try {
+                        receiveLoop();
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }).start();
 				notifyConnectionListeners(true);
 
 			} catch (IOException e) {
@@ -220,7 +226,9 @@ public class ClientMsg {
 		}
 	}
 
-	// Method to send files using a file path
+	/**
+	 * Method to send files
+	 */
 	public void sendFile(int destId, Path filePath) throws IOException {
 		byte[] fileData = Files.readAllBytes(filePath);
 		sendPacket(destId, fileData);
@@ -229,7 +237,7 @@ public class ClientMsg {
 		/**
          * Start the receive loop. Has to be called only once.
          */
-	private void receiveLoop() {
+	private void receiveLoop() throws IOException {
 		try {
 			while (s != null && !s.isClosed()) {
 				int sender = dis.readInt();
@@ -291,8 +299,7 @@ public class ClientMsg {
 					} else {
 						notifyMessageListeners(new Packet(sender, dest, data));
 					}
-
-			}
+				}
 		} catch (IOException e) {
 			// En cas d'erreur, fermer la connexion
 			e.printStackTrace();
@@ -376,19 +383,19 @@ public class ClientMsg {
 					System.out.println("\nA qui voulez vous écrire ? ");
 					int dest = Integer.parseInt(sc.nextLine());
 
-					System.out.println("\n Voulez-vous envoyer une image? \n0 : oui\n1 : non");
-					int codeI = Integer.parseInt(sc.nextLine());
-					if (codeI == 0) { // Send an image
-						ByteArrayOutputStream bos = new ByteArrayOutputStream();
-						DataOutputStream dos = new DataOutputStream(bos);
-
-						dos.writeByte(6);
-						System.out.println("Adresse de l'image - format jpg:");
-						String imagePath = sc.nextLine();
-						BufferedImage image = ImageIO.read(new File(imagePath));
-				//		Packet packet = new Packet(c.getIdentifier(), dest, bos.toByteArray(), image);
-					//	c.sendPacket(dest, packet.toByteArray());
-					}
+//					System.out.println("\n Voulez-vous envoyer une image? \n0 : oui\n1 : non");
+//					int codeI = Integer.parseInt(sc.nextLine());
+//					if (codeI == 0) { // Send an image
+//						ByteArrayOutputStream bos = new ByteArrayOutputStream();
+//						DataOutputStream dos = new DataOutputStream(bos);
+//
+//						dos.writeByte(6);
+//						System.out.println("Adresse de l'image - format jpg:");
+//						String imagePath = sc.nextLine();
+//						BufferedImage image = ImageIO.read(new File(imagePath));
+//						Packet packet = new Packet(c.getIdentifier(), dest, bos.toByteArray(), image);
+//						c.sendPacket(dest, packet.toByteArray());
+//					}
 
 					System.out.println("\nVotre message ? ");
 					lu = sc.nextLine();

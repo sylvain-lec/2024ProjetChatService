@@ -88,7 +88,7 @@ public class UserMsg implements PacketProcessor{
 	
 	
 	/*
-	 * METHODS FOR MANAING THE CONNECTION
+	 * METHODS FOR MANAGING THE CONNECTION
 	 */
 	public boolean open(Socket s, String username) {
 		if (active) return false;
@@ -114,7 +114,7 @@ public boolean isConnected() {
 		return s!=null;
 	}
 	
-	// boucle d'envoie
+	// boucle de réception
 	public void receiveLoop() {
 		try {
 			DataInputStream dis = new DataInputStream(s.getInputStream());

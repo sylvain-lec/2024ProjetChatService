@@ -75,7 +75,7 @@ public class ServerPacketProcessor implements PacketProcessor {
 			sendInfos(p, buf);
 		}
 
-    	else if (type == 9) { //SendFile
+    	else if (type == 9) { //cas envoi de fichier
 			sendFile(p.srcId, buf);
 		}
 
@@ -83,6 +83,28 @@ public class ServerPacketProcessor implements PacketProcessor {
 		else {
 				LOG.warning("Server message of type=" + type + " not handled by procesor");
 		}
+	}
+
+	/**
+	 *  Protocol to send a file to another user
+	 *  packet format : type (1 byte) + destId (4 bytes) + filename length (4 bytes) + filename + file length (4 bytes) + file
+	 *  @param userId
+	 *  @param data
+	 */
+	private void sendFile(int userId, ByteBuffer data) {
+		int destId = data.getInt();
+		int length = data.getInt();
+		// Get the filename
+		byte[] filenameBytes = new byte[length];
+		data.get(filenameBytes);
+		String filename = new String(filenameBytes, StandardCharsets.UTF_8);
+		// Get the file length
+		length = data.getInt();
+		byte[] fileBytes = new byte[length];
+		data.get(fileBytes);
+		// Send the file to the destination user
+		Packet response = new Packet(userId, destId, fileBytes);
+		server.getUser(destId).process(response);
 	}
 
 	/**
@@ -405,23 +427,6 @@ for (UserMsg u : g.getMembers()) {
 		Packet reponse = new Packet(0, ownerId, dataArray2);
 		server.getUser(ownerId).process(reponse);
 	}
-
-    // Protocol to send a file with receiveLoop
-    private void sendFile(int userId, ByteBuffer data) {
-        int destId = data.getInt();
-        int length = data.getInt();
-        byte[] filenameBytes = new byte[length];
-        data.get(filenameBytes);
-        String filename = new String(filenameBytes, StandardCharsets.UTF_8);
-
-        length = data.getInt();
-        byte[] fileBytes = new byte[length];
-        data.get(fileBytes);
-
-        // Send the file to the destination user
-        Packet reponse = new Packet(userId, destId, fileBytes);
-        server.getUser(destId).process(reponse);
-    }
 
 //	private void login(int userId, ByteBuffer buf) {
 //		LOG.info("on est dans login()");
