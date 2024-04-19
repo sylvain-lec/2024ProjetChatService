@@ -2,19 +2,25 @@ package fr.uga.miashs.dciss.chatservice.gui;
 import fr.uga.miashs.dciss.chatservice.client.ClientMsg;
 import fr.uga.miashs.dciss.chatservice.client.ConnectionListener;
 import fr.uga.miashs.dciss.chatservice.client.MessageListener;
+import fr.uga.miashs.dciss.chatservice.common.Packet;
+import fr.uga.miashs.dciss.chatservice.server.ServerMsg;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.net.Socket;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import javax.swing.ImageIcon;
 import javax.swing.text.*;
 
-public class Chat {
+public class Chat implements MessageListener, ConnectionListener{
 
     private JFrame frame;
     private JPanel topPanel;
@@ -40,11 +46,14 @@ public class Chat {
     private JButton changePasswordButton;
 
     private ClientMsg clientMsg;
+    private Socket s;
 
 
     public Chat() {
         // REGISTER to the server
         clientMsg = new ClientMsg("localhost", 1666);
+        clientMsg.addMessageListener(this);
+        clientMsg.addConnectionListener(this);
 //        clientMsg.addMessageListener((MessageListener) this);
 //        clientMsg.addConnectionListener((ConnectionListener) this);
 
@@ -488,7 +497,8 @@ public class Chat {
         messageInput.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                //sendMessage();
+
+                clientMsg.sendPacket(clientMsg.getIdentifier(), messageInput.getText().getBytes());
             }
         });
 
@@ -547,6 +557,70 @@ public class Chat {
         sendButton.setText("Envoyer"); // Change the button text
         sendButton.setFont(new Font("SansSerif", Font.BOLD, 14)); // Change font size
         sendButton.setPreferredSize(new Dimension(100, 40)); // Change button size if necessary
+    }
+
+    @Override
+    public void connectionEvent(boolean active) {
+
+    }
+
+    @Override
+    public void messageReceived(Packet p) {
+        try {
+        DataInputStream dis = new DataInputStream(s.getInputStream());
+
+            while (s != null && !s.isClosed()) {
+                int sender = dis.readInt();
+                int dest = dis.readInt();
+                int length = dis.readInt();
+                byte[] data = new byte[length];
+                dis.readFully(data);
+
+                Packet packet = new Packet(sender, dest, data); // Create a packet to receive an image if there is one
+
+                if (sender == ServerMsg.SERVER_CLIENTID && dest == clientMsg.getIdentifier()) {
+                    ByteBuffer buffer = ByteBuffer.wrap(data);
+                    // Suppose que le serveur envoie un byte pour définir le type de réponse.
+                    byte responseType = buffer.get();
+
+                    if (responseType == 1) { //création de groupe
+                        int groupId = buffer.getInt();
+                        int lengthMsg = buffer.getInt();
+                        byte[] msgBytes = new byte[lengthMsg];
+                        buffer.get(msgBytes);
+                        String msg = new String(msgBytes, StandardCharsets.UTF_8);
+                        System.out.println(msg);
+
+                    }
+                    else if (responseType == 2 || responseType == 3 || responseType == 4) { //handle group deletion, whether it worked or not
+                        int lengthMsg = buffer.getInt();
+                        byte[] msgBytes = new byte[lengthMsg];
+                        buffer.get(msgBytes);
+                        String msg = new String(msgBytes, StandardCharsets.UTF_8);
+                        System.out.println(msg);
+                    }
+
+                    else if (responseType == 9) { //info retrieval upon authentication
+                        int usernameLength = buffer.getInt();
+                        byte[] usernameBytes = new byte[usernameLength];
+                        buffer.get(usernameBytes);
+                        String username = new String(usernameBytes, StandardCharsets.UTF_8); //retrieve the username
+                    //    this.username = username; //set the username
+
+                        int passwordLength = buffer.getInt();
+                        byte[] passwordBytes = new byte[passwordLength];
+                        buffer.get(passwordBytes);
+                        String password = new String(passwordBytes, StandardCharsets.UTF_8); //retrieve the password
+                     //   this.password = password; //set the password
+                    }
+                } else {
+                 //   notifyMessageListeners(new Packet(sender, dest, data));
+                }
+            }
+        } catch (IOException e) {
+            // En cas d'erreur, fermer la connexion
+            e.printStackTrace();
+        }
     }
 
     // Custom renderer for JList
