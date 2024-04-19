@@ -268,8 +268,6 @@ public class ClientMsg {
 	 * Method to handle file packets
 	 */
 	private void handleFilePacket(byte[] data/*, String filePath*/) throws IOException {
-		// get the filename, file extension and the file content
-		//ByteBuffer buffer = ByteBuffer.wrap(data);
 		DataInputStream dis = new DataInputStream(new ByteArrayInputStream(data));
 
 		byte type = dis.readByte();
@@ -278,24 +276,18 @@ public class ClientMsg {
 		}
 		String filename = dis.readUTF();
 		String fileExtension = dis.readUTF();
+		int fileContentLength = dis.readInt(); // read the size of the file content for syso
 
-		int fileContentLength = dis.readInt();
-		byte[] fileContent = new byte[fileContentLength];
-
-		Files.copy(dis, Paths.get(filename + "." + fileExtension));
-
-		//dis.readFully(fileContent);
-		System.out.println("File received successfully, size: " + fileContent.length + " bytes");
-
-		/*try {
-			// save the file in the chosen directory with the correct file extension
-			File file = new File(filePath + "/" + filename + "." + fileExtension);
-			FileOutputStream fos = new FileOutputStream(file);
-			fos.write(fileContent);
-			fos.close();
-			System.out.println("File " + filename + "." + fileExtension + " received and saved in " + filePath + " directory.");
-		} catch (Exception e) {
-			System.out.println("An error occurred while writing the file: " + e.getMessage());
+		//if (filePath == null) {
+			// VERSION avec envoi du fichier dans le dossier courant
+			Files.copy(dis, Paths.get(filename)); // write the file content to the file
+			System.out.println("File received successfully in current folder, size: " + fileContentLength + " bytes");
+		/*}
+		else {
+			// VERSION avec envoi du fichier dans un dossier spécifique
+			Path path = Path.of(filePath + "/" + filename + "." + fileExtension);
+			Files.copy(dis, path); // write the file content to the file
+			System.out.println("File received successfully in folder " + filePath +  ", size: " + fileContentLength + " bytes");
 		}*/
 	}
 
@@ -324,16 +316,13 @@ public class ClientMsg {
 						String msg = new String(msgBytes, StandardCharsets.UTF_8);
 						System.out.println(msg);
 
-					}
-					else if (responseType == 2 || responseType == 3 || responseType == 4) { //handle group deletion, whether it worked or not
+					} else if (responseType == 2 || responseType == 3 || responseType == 4) { //handle group deletion, whether it worked or not
 						int lengthMsg = buffer.getInt();
 						byte[] msgBytes = new byte[lengthMsg];
 						buffer.get(msgBytes);
 						String msg = new String(msgBytes, StandardCharsets.UTF_8);
 						System.out.println(msg);
-					}
-
-					else if (responseType == 9) { //info retrieval upon authentication
+					} else if (responseType == 9) { //info retrieval upon authentication
 						int usernameLength = buffer.getInt();
 						byte[] usernameBytes = new byte[usernameLength];
 						buffer.get(usernameBytes);
@@ -346,24 +335,20 @@ public class ClientMsg {
 						String password = new String(passwordBytes, StandardCharsets.UTF_8); //retrieve the password
 						this.password = password; //set the password
 					}
-
-					/*else if (responseType == 12){ // file packet
-						// prompt the user for a file path
-						System.out.println("Enter the path where you want to save the file:");
-						Scanner scanner = new Scanner(System.in);
-						scanner.nextLine(); // Clear the scanner buffer
-						String filePath = scanner.nextLine();
-						handleFilePacket(data, filePath);
-
-					}*/
-				} else if (data[0]==12) {
+					// if packet comes from another user
+					// if it's a file
+				} else if (data[0] == 12) {
+					// prompt the user for a file path
+					/*System.out.println("Someone wants to send you a file. Enter the path where you want to save it: ");
+					Scanner scanner = new Scanner(System.in);
+					String filePath = scanner.nextLine();
+					handleFilePacket(data, filePath);*/
 					handleFilePacket(data);
-				}  else {
+					// if it's a message
+				} else {
 					notifyMessageListeners(new Packet(sender, dest, data));
 				}
-				}
-
-
+			}
 		} catch (IOException e) {
 			// En cas d'erreur, fermer la connexion
 			e.printStackTrace();
