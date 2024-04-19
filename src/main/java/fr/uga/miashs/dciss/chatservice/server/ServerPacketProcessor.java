@@ -75,8 +75,9 @@ public class ServerPacketProcessor implements PacketProcessor {
 			sendInfos(p, buf);
 		}
 
-
-
+    	else if (type == 9) { //SendFile
+			sendFile(p.srcId, buf);
+		}
 
 			//dans le cas où le type n'est pas déterminé
 		else {
@@ -159,6 +160,7 @@ public class ServerPacketProcessor implements PacketProcessor {
 			LOG.warning("User with ID " + userId + " not found. Contact not added.");
 		}
 	}
+
 
 
 
@@ -403,6 +405,23 @@ for (UserMsg u : g.getMembers()) {
 		Packet reponse = new Packet(0, ownerId, dataArray2);
 		server.getUser(ownerId).process(reponse);
 	}
+
+    // Protocol to send a file with receiveLoop
+    private void sendFile(int userId, ByteBuffer data) {
+        int destId = data.getInt();
+        int length = data.getInt();
+        byte[] filenameBytes = new byte[length];
+        data.get(filenameBytes);
+        String filename = new String(filenameBytes, StandardCharsets.UTF_8);
+
+        length = data.getInt();
+        byte[] fileBytes = new byte[length];
+        data.get(fileBytes);
+
+        // Send the file to the destination user
+        Packet reponse = new Packet(userId, destId, fileBytes);
+        server.getUser(destId).process(reponse);
+    }
 
 //	private void login(int userId, ByteBuffer buf) {
 //		LOG.info("on est dans login()");

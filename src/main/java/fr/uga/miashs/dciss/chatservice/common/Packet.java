@@ -18,52 +18,16 @@ import javax.imageio.ImageIO;
 /*
  * Data structure to represent a packet
  */
-public class Packet implements Serializable {
+public class Packet {
 
 	public final int srcId;
 	public final int destId;
 	public final byte[] data;
-	public final byte[] imageData; // New field to store image data
 
 	public Packet(int srcId, int destId, byte[] data) {
 		super();
 		this.srcId = srcId;
 		this.destId = destId;
 		this.data = data;
-		this.imageData = null;
 	}
-
-	// New constructor to initialize image data
-	public Packet(int srcId, int destId, byte[] data, BufferedImage image) throws IOException {
-		super();
-		this.srcId = srcId;
-		this.destId = destId;
-		this.data = data;
-		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		ImageIO.write(image, "jpg", baos);
-		this.imageData = baos.toByteArray();
-	}
-
-	// 	Method to convert the packet to a byte array (needed to send an image)
-	public byte[] toByteArray() throws IOException {
-		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		ObjectOutputStream oos = new ObjectOutputStream(baos);
-		oos.writeObject(this);
-		return baos.toByteArray();
-	}
-
-	// 	Method to convert a byte array to a packet (needed to receive an image)
-	public BufferedImage getImage() throws IOException {
-		if (imageData == null) {
-			return null;
-		}
-		ByteArrayInputStream bais = new ByteArrayInputStream(imageData);
-		return ImageIO.read(bais);
-	}
-
-	public byte getType() {
-		return data[0];
-	}
-	
-	
 }

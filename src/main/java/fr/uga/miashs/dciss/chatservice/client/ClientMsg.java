@@ -212,12 +212,17 @@ public class ClientMsg {
 			// error, connection closed
 			closeSession();
 		}
-
 	}
 
-	/**
-	 * Start the receive loop. Has to be called only once.
-	 */
+	// Method to send files using a file path
+	public void sendFile(int destId, Path filePath) throws IOException {
+		byte[] fileData = Files.readAllBytes(filePath);
+		sendPacket(destId, fileData);
+	}
+
+		/**
+         * Start the receive loop. Has to be called only once.
+         */
 	private void receiveLoop() {
 		try {
 			while (s != null && !s.isClosed()) {
@@ -228,15 +233,11 @@ public class ClientMsg {
 				dis.readFully(data);
 
 				Packet packet = new Packet(sender, dest, data); // Create a packet to receive an image if there is one
-				BufferedImage image = packet.getImage(); // Get the image from the packet
-				if (image != null) {
-					// TODO: The packet contains an image, send it to the listeners
-					notifyMessageListeners(new Packet(sender, dest, data, image));
-				} else {
-					if (sender == ServerMsg.SERVER_CLIENTID && dest == this.identifier) {
-						ByteBuffer buffer = ByteBuffer.wrap(data);
-						// Suppose que le serveur envoie un byte pour définir le type de réponse.
-						byte responseType = buffer.get();
+
+				if (sender == ServerMsg.SERVER_CLIENTID && dest == this.identifier) {
+					ByteBuffer buffer = ByteBuffer.wrap(data);
+					// Suppose que le serveur envoie un byte pour définir le type de réponse.
+					byte responseType = buffer.get();
 
 					if (responseType == 1) { //création de groupe
 						int groupId = buffer.getInt();
