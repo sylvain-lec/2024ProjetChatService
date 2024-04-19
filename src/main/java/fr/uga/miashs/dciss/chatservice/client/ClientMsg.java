@@ -119,6 +119,10 @@ public class ClientMsg {
 	}
 	public String getUsername() { return username; }
 
+	public void setIdentifier(int identifier) {
+		this.identifier = identifier;
+	}
+
 	/**
 	 * sets username client-side, and sends a packet to the server to update the username server-side.
 	 * @param username
@@ -287,7 +291,7 @@ public class ClientMsg {
 					} else {
 						notifyMessageListeners(new Packet(sender, dest, data));
 					}
-				}
+
 			}
 		} catch (IOException e) {
 			// En cas d'erreur, fermer la connexion
@@ -382,8 +386,8 @@ public class ClientMsg {
 						System.out.println("Adresse de l'image - format jpg:");
 						String imagePath = sc.nextLine();
 						BufferedImage image = ImageIO.read(new File(imagePath));
-						Packet packet = new Packet(c.getIdentifier(), dest, bos.toByteArray(), image);
-						c.sendPacket(dest, packet.toByteArray());
+				//		Packet packet = new Packet(c.getIdentifier(), dest, bos.toByteArray(), image);
+					//	c.sendPacket(dest, packet.toByteArray());
 					}
 
 					System.out.println("\nVotre message ? ");

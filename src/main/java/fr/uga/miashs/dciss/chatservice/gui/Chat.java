@@ -42,16 +42,76 @@ public class Chat {
 
 
     public Chat() {
-        // connect to the server
+        // REGISTER to the server
         clientMsg = new ClientMsg("localhost", 1666);
-        clientMsg.addMessageListener((MessageListener) this);
-        clientMsg.addConnectionListener((ConnectionListener) this);
-        clientMsg.startSession();
+//        clientMsg.addMessageListener((MessageListener) this);
+//        clientMsg.addConnectionListener((ConnectionListener) this);
 
-        initializeUI();
-        customizeUIComponents();
-        initializeButtons();
+        openFirstWindow();
     }
+    private void openFirstWindow() {
+        frame = new JFrame("Chat");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(300, 200);
+
+        JButton registerButton = new JButton("Register");
+        registerButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String password = JOptionPane.showInputDialog(frame, "Enter your password:");
+                try {
+                    clientMsg.startSession(password);
+                    String username = JOptionPane.showInputDialog(frame, "Enter your username:");
+                    clientMsg.setUsername(username);
+                    System.out.println("User ID: " + clientMsg.getIdentifier() + ", Username: " + clientMsg.getUsername() + ", Password: " + password);
+                    initializeUI();
+                    customizeUIComponents();
+                    initializeButtons();
+                } catch (UnknownHostException ex) {
+                    throw new RuntimeException(ex);
+                }
+            }
+        });
+
+        JButton loginButton = new JButton("Login");
+        loginButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                JTextField idField = new JTextField(5);
+                JPasswordField passwordField = new JPasswordField(5);
+
+                JPanel myPanel = new JPanel();
+                myPanel.add(new JLabel("id:"));
+                myPanel.add(idField);
+                int id = Integer.parseInt(idField.getText());
+                clientMsg.setIdentifier(id) ;
+                myPanel.add(Box.createHorizontalStrut(15)); // a spacer
+                myPanel.add(new JLabel("Password:"));
+                myPanel.add(passwordField);
+
+                int result = JOptionPane.showConfirmDialog(null, myPanel,
+                        "Votre id et Password", JOptionPane.OK_CANCEL_OPTION);
+                if (result == JOptionPane.OK_OPTION) {
+                    try {
+                        clientMsg.startSession(new String(passwordField.getPassword()));
+                        initializeUI();
+                        customizeUIComponents();
+                        initializeButtons();
+                    } catch (UnknownHostException ex) {
+                        throw new RuntimeException(ex);
+                    }
+                }
+            }
+        });
+
+        JPanel panel = new JPanel();
+        panel.add(registerButton);
+        panel.add(loginButton);
+
+        frame.getContentPane().add(panel, BorderLayout.CENTER);
+        frame.setVisible(true);
+    }
+
 
     private void initializeButtons() {
         addContactButton = new JButton("Ajouter Contact");
@@ -278,6 +338,7 @@ public class Chat {
                         break;
                     case "Log Out":
                         performLogout();
+                        frame.removeAll();
                         break;
                 }
             }
@@ -288,18 +349,20 @@ public class Chat {
 
             }
             private void showLoginDialog() throws UnknownHostException {
-                JTextField usernameField = new JTextField(5);
+                JTextField idField = new JTextField(5);
                 JPasswordField passwordField = new JPasswordField(5);
 
                 JPanel myPanel = new JPanel();
-                myPanel.add(new JLabel("Username:"));
-                myPanel.add(usernameField);
+                myPanel.add(new JLabel("id:"));
+                myPanel.add(idField);
+                int id = Integer.parseInt(idField.getText());
+                clientMsg.setIdentifier(id) ;
                 myPanel.add(Box.createHorizontalStrut(15)); // a spacer
                 myPanel.add(new JLabel("Password:"));
                 myPanel.add(passwordField);
 
                 int result = JOptionPane.showConfirmDialog(null, myPanel,
-                        "Votre Username et Password", JOptionPane.OK_CANCEL_OPTION);
+                        "Votre id et Password", JOptionPane.OK_CANCEL_OPTION);
                 if (result == JOptionPane.OK_OPTION) {
                     clientMsg.startSession(new String(passwordField.getPassword()));
                 }
@@ -308,7 +371,28 @@ public class Chat {
 
             private void performLogout() {
                 clientMsg.endSession();
+                frame.removeAll();
                 JOptionPane.showMessageDialog(frame, "Vous avez Logout.", "Logout Succèss", JOptionPane.INFORMATION_MESSAGE);
+                //remove all
+//                clientMsg = new ClientMsg("localhost", 1666);
+//////        clientMsg.addMessageListener((MessageListener) this);
+////        clientMsg.addConnectionListener((ConnectionListener) this);
+//                String password = JOptionPane.showInputDialog(frame, "Enter your password:");
+//                try {
+//                    clientMsg.startSession(password);
+//                    //ask the client to choose a username
+//                    String username = JOptionPane.showInputDialog(frame, "Enter your username:");
+//                    clientMsg.setUsername(username);
+//                    //print somewhere the userid, username and password
+//                    System.out.println("User ID: " + clientMsg.getIdentifier() + ", Username: " + clientMsg.getUsername() + ", Password: " + password);
+//                } catch (UnknownHostException e) {
+//                    throw new RuntimeException(e);
+//                }
+//
+//                initializeUI();
+//                customizeUIComponents();
+//                initializeButtons();
+
             }
 
         });
