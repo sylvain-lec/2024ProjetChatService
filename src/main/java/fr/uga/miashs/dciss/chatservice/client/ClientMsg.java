@@ -230,11 +230,69 @@ public class ClientMsg {
     }
 
 	/**
-	 * Method to send files
+	 * Method to send files with their name and extension
 	 */
-	public void sendFile(int destId, Path filePath) throws IOException {
-		byte[] fileData = Files.readAllBytes(filePath);
-		sendPacket(destId, fileData);
+	public void sendFile(int destId, Path filePath, String filename) {
+		try {
+			byte[] data = Files.readAllBytes(filePath);
+			System.out.println("File read successfully, size: " + data.length + " bytes");
+			String fileExtension = getFileExtension(filePath);
+			ByteArrayOutputStream bos = new ByteArrayOutputStream();
+			DataOutputStream dos = new DataOutputStream(bos);
+			dos.writeInt(filename.length()); // send size of filename
+			dos.writeUTF(filename);
+			dos.writeInt(fileExtension.length()); // send size of file extension
+			dos.writeUTF(fileExtension);
+			dos.writeInt(data.length); // send size of file content
+			dos.write(data);
+			dos.flush();
+			sendPacket(destId, bos.toByteArray());
+			System.out.println("File sent successfully");
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	/**
+	 * Method to get the file extension
+	 */
+	private String getFileExtension(Path filePath) {
+		String fileName = filePath.getFileName().toString();
+		int dotIndex = fileName.lastIndexOf('.');
+		return (dotIndex == -1) ? "" : fileName.substring(dotIndex + 1);
+	}
+
+	/**
+	 * Method to handle file packets
+	 */
+	private void handleFilePacket(byte[] data, String filePath) throws IOException {
+		// get the filename, file extension and the file content
+		ByteBuffer buffer = ByteBuffer.wrap(data);
+		int filenameLength = buffer.getInt();
+		byte[] filenameBytes = new byte[filenameLength];
+		dis.readFully(filenameBytes);
+		String filename = new String(filenameBytes, StandardCharsets.UTF_8);
+
+		int fileExtensionLength = buffer.getInt();
+		byte[] fileExtensionBytes = new byte[fileExtensionLength];
+		dis.readFully(fileExtensionBytes);
+		String fileExtension = new String(fileExtensionBytes, StandardCharsets.UTF_8);
+
+		int fileContentLength = buffer.getInt();
+		byte[] fileContent = new byte[fileContentLength];
+		dis.readFully(fileContent);
+		System.out.println("File received successfully, size: " + fileContent.length + " bytes");
+
+		try {
+			// save the file in the chosen directory with the correct file extension
+			File file = new File(filePath + "/" + filename + "." + fileExtension);
+			FileOutputStream fos = new FileOutputStream(file);
+			fos.write(fileContent);
+			fos.close();
+			System.out.println("File " + filename + "." + fileExtension + " received and saved in " + filePath + " directory.");
+		} catch (Exception e) {
+			System.out.println("An error occurred while writing the file: " + e.getMessage());
+		}
 	}
 
 		/**
@@ -249,7 +307,15 @@ public class ClientMsg {
 				byte[] data = new byte[length];
 				dis.readFully(data);
 
-				Packet packet = new Packet(sender, dest, data); // Create a packet to receive an image if there is one
+				// if the packet is a file, save it in the client's directory
+				if (sender != ServerMsg.SERVER_CLIENTID && dest == this.identifier){
+					// prompt the user for a file path
+					System.out.println("Enter the path where you want to save the file:");
+					Scanner scanner = new Scanner(System.in);
+					scanner.nextLine(); // Clear the scanner buffer
+					String filePath = scanner.nextLine();
+					handleFilePacket(data, filePath);
+				}
 
 				if (sender == ServerMsg.SERVER_CLIENTID && dest == this.identifier) {
 					ByteBuffer buffer = ByteBuffer.wrap(data);
@@ -380,34 +446,26 @@ public class ClientMsg {
 		String lu = null;
 		while (!"\\quit".equals(lu)) {
 			try {
-				System.out.println("\n" + c.getUsername()+ ", que souhaitez-vous faire? \n0 : envoyer un message\n1 : créer un groupe\n2 : supprimer un groupe\n3 : ajouter un membre à un groupe\n4 : supprimer un membre d'un groupe\n5 : changer de nom\n7 : changer de mot de passe\n8 : Ajouter un contact\n");
+				System.out.println("\n" + c.getUsername()+ ", que souhaitez-vous faire? \n0 : envoyer un message\n1 : envoyer un fichier\n2 : créer un groupe\n3 : supprimer un groupe\n4 : ajouter un membre à un groupe\n5 : supprimer un membre d'un groupe\n6 : changer de nom\n7 : changer de mot de passe\n8 : Ajouter un contact\n");
 				int code = Integer.parseInt(sc.nextLine());
 
 				if (code == 0) { //envoyer un msg
 					System.out.println("\nA qui voulez vous écrire ? ");
 					int dest = Integer.parseInt(sc.nextLine());
-
-//					System.out.println("\n Voulez-vous envoyer une image? \n0 : oui\n1 : non");
-//					int codeI = Integer.parseInt(sc.nextLine());
-//					if (codeI == 0) { // Send an image
-//						ByteArrayOutputStream bos = new ByteArrayOutputStream();
-//						DataOutputStream dos = new DataOutputStream(bos);
-//
-//						dos.writeByte(6);
-//						System.out.println("Adresse de l'image - format jpg:");
-//						String imagePath = sc.nextLine();
-//						BufferedImage image = ImageIO.read(new File(imagePath));
-//						Packet packet = new Packet(c.getIdentifier(), dest, bos.toByteArray(), image);
-//						c.sendPacket(dest, packet.toByteArray());
-//					}
-
 					System.out.println("\nVotre message ? ");
 					lu = sc.nextLine();
 					c.sendPacket(dest, lu.getBytes());
 
-				}
+				} else if (code == 1) { //envoyer un fichier
+					System.out.println("\nA qui voulez vous envoyer un fichier ? ");
+					int dest = Integer.parseInt(sc.nextLine());
+					System.out.println("\nChemin du fichigier ? ");
+					String path = sc.nextLine(); // Use nextLine() to read the file path
+					Path filePath = Path.of(path);
+					String filename = filePath.getFileName().toString();
+					c.sendFile(dest, filePath, filename);
 
-				else if (code == 1) { //creer un groupe
+				} else if (code == 2) { //creer un groupe
 					List<Integer> members = new ArrayList<>();
 					int member = 1;
 					// list of members
@@ -419,13 +477,13 @@ public class ClientMsg {
 					c.creationGroupe(members);
 				}
 
-				else if (code == 2) { //supprimer un groupe
+				else if (code == 3) { //supprimer un groupe
 					System.out.println("quel groupe ?");
 					int gp = Integer.parseInt(sc.nextLine());
 					c.supprimerGroupe(gp);
 				}
 
-				else if (code == 3) { //ajouter un member à un groupe
+				else if (code == 4) { //ajouter un member à un groupe
 					System.out.println("\nDans quel groupe voulez-vous ajouter un membre?");
 					int idGroup = Integer.parseInt(sc.nextLine());
 
@@ -435,7 +493,7 @@ public class ClientMsg {
 					c.addMember(idGroup, userId);
 				}
 
-				else if (code == 4) { //supprimer un membre d'un
+				else if (code == 5) { //supprimer un membre d'un
 					System.out.println("\nDans quel groupe voulez-vous supprimer un membre?");
 					int idGroup = Integer.parseInt(sc.nextLine()); // idGroup
 
@@ -445,7 +503,7 @@ public class ClientMsg {
 					c.removeMember(idGroup, userId);
 				}
 
-				else if (code == 5) { //changer de nom
+				else if (code == 6) { //changer de nom
 					System.out.println("\nNew username : ");
 					String newUsername = sc.nextLine();
 					c.setUsername(newUsername);
@@ -483,7 +541,7 @@ public class ClientMsg {
 
 
 			} catch (InputMismatchException | NumberFormatException e) {
-				System.out.println("Mauvais format");
+				System.out.println("Mauvais format: " + e.getMessage());
 			}
 		}
 
