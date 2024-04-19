@@ -239,6 +239,7 @@ public class ClientMsg {
 			String fileExtension = getFileExtension(filePath);
 			ByteArrayOutputStream bos = new ByteArrayOutputStream();
 			DataOutputStream dos = new DataOutputStream(bos);
+			dos.writeByte(9); // send file
 			dos.writeInt(filename.length()); // send size of filename
 			dos.writeUTF(filename);
 			dos.writeInt(fileExtension.length()); // send size of file extension
@@ -459,9 +460,11 @@ public class ClientMsg {
 				} else if (code == 1) { //envoyer un fichier
 					System.out.println("\nA qui voulez vous envoyer un fichier ? ");
 					int dest = Integer.parseInt(sc.nextLine());
-					System.out.println("\nChemin du fichigier ? ");
+					System.out.println("\nChemin du fichier ? ");
 					String path = sc.nextLine(); // Use nextLine() to read the file path
 					Path filePath = Path.of(path);
+					// Path is root of user
+					// Path filePath = Path.of(System.getProperty("user.dir"));
 					String filename = filePath.getFileName().toString();
 					c.sendFile(dest, filePath, filename);
 

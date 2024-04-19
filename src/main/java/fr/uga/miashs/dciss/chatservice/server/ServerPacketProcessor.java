@@ -105,6 +105,7 @@ public class ServerPacketProcessor implements PacketProcessor {
 	 *  @param data
 	 */
 	private void sendFile(int userId, ByteBuffer data) {
+		LOG.info("ServerPacketProcessor : sendFile() called");
 		int destId = data.getInt();
 		int length = data.getInt();
 		// Get the filename
