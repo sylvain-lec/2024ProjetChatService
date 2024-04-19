@@ -73,10 +73,6 @@ public class ServerPacketProcessor implements PacketProcessor {
 			sendInfos(p, buf);
 		}
 
-    	/*else if (type == 12) { //cas envoi de fichier
-			sendFile(p.srcId, p.destId, buf);
-		}*/
-
 			//dans le cas où le type n'est pas déterminé
 		else {
 			LOG.warning("Server message of type=" + type + " not handled by procesor");
