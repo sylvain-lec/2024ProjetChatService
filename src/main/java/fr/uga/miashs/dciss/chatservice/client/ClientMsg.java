@@ -446,7 +446,7 @@ public class ClientMsg {
 		String lu = null;
 		while (!"\\quit".equals(lu)) {
 			try {
-				System.out.println("\n" + c.getUsername()+ ", que souhaitez-vous faire? \n0 : envoyer un message\n1 : envoyer un fichier\n2 : créer un groupe\n3 : supprimer un groupe\n4 : ajouter un membre à un groupe\n5 : supprimer un membre d'un groupe\n6 : changer de nom\n7 : changer de mot de passe\n8 : Ajouter un contact\n");
+				System.out.println("\n" + c.getUsername()+ ", que souhaitez-vous faire? \n0 : envoyer un message\n1 : envoyer un fichier\n2 : créer un groupe\n3 : supprimer un groupe\n4 : ajouter un membre à un groupe\n5 : supprimer un membre d'un groupe\n6 : changer de nom\n7 : changer de mot de passe\n8 : Ajouter un contact\n9 : Afficher la liste des contacts\n");
 				int code = Integer.parseInt(sc.nextLine());
 
 				if (code == 0) { //envoyer un msg
@@ -513,31 +513,32 @@ public class ClientMsg {
 				else if (code == 7) { //change password
 					boolean reussi = c.updatePassword();
 
-                } else if (code == 8) { // Ajouter un contact à un utilisateur
-                    try {
-                        // Création du flux de sortie pour écrire les données du paquet
-                        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                        DataOutputStream dos = new DataOutputStream(bos);
+				} else if (code == 8) { // Ajouter un contact à un utilisateur
+					try {
+						// Création du flux de sortie pour écrire les données du paquet
+						ByteArrayOutputStream bos = new ByteArrayOutputStream();
+						DataOutputStream dos = new DataOutputStream(bos);
 
-                        // Type 8 : Ajout de contact sur le serveur
-                        dos.writeByte(8);
+						// Type 8 : Ajout de contact sur le serveur
+						dos.writeByte(8);
 
-                        System.out.println("\nEntrez le nom du contact : ");
-                        String contactName = sc.nextLine();
+						System.out.println("\nEntrez le nom du contact : ");
+						String contactName = sc.nextLine();
 
-                        dos.writeInt(contactName.getBytes(StandardCharsets.UTF_8).length);
-                        dos.write(contactName.getBytes(StandardCharsets.UTF_8));
-                        dos.flush();
+						dos.writeInt(contactName.getBytes(StandardCharsets.UTF_8).length);
+						dos.write(contactName.getBytes(StandardCharsets.UTF_8));
+						dos.flush();
 
-                        c.sendPacket(0, bos.toByteArray());
-                        System.out.println("Packet for adding contact sent to server.");
+						c.sendPacket(0, bos.toByteArray());
+						System.out.println("Packet for adding contact sent to server.");
 
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                } else if (code == 9) { // Demander la liste de contacts
-                    c.requestContactList();
-                }
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				} else if (code == 9) { // Demander la liste de contacts
+					c.requestContactList();
+				}
+
 
 
 			} catch (InputMismatchException | NumberFormatException e) {
@@ -545,25 +546,26 @@ public class ClientMsg {
 			}
 		}
 
-		c.closeSession();
+        c.closeSession();
 
-	}
+    }
 
-	/**
-	 * Update the password of the user
-	 * packet format (if correct password) : 1byte for the type (7), 4bytes (an int) for the length of the password, then the password
-	 * @return true if the password has been updated, false otherwise
-	 */
-	public boolean updatePassword() {
-		Scanner sc = new Scanner(System.in);
+    /**
+     * Update the password of the user
+     * packet format (if correct password) : 1byte for the type (7), 4bytes (an int) for the length of the password, then the password
+     *
+     * @return true if the password has been updated, false otherwise
+     */
+    public boolean updatePassword() {
+        Scanner sc = new Scanner(System.in);
 
-		System.out.println("\nSaisissez votre ancien mot de passe : ");
-		String oldPassword = sc.nextLine();
-		//get password associated with the username, without using the server
-		boolean isAuthenticated = this.getPassword().equals(oldPassword);
-		//if the password is correct, the server will ask for the new password
-		//AUTHENTIFICATION
-		if (isAuthenticated) {
+        System.out.println("\nSaisissez votre ancien mot de passe : ");
+        String oldPassword = sc.nextLine();
+        //get password associated with the username, without using the server
+        boolean isAuthenticated = this.getPassword().equals(oldPassword);
+        //if the password is correct, the server will ask for the new password
+        //AUTHENTIFICATION
+        if (isAuthenticated) {
 			System.out.println("Mot de passe correct. Nouveau mot de passe : ");
 			String newPassword = sc.nextLine();
 			//send packet to the server; the server will update the password.
@@ -711,7 +713,11 @@ public class ClientMsg {
 
 }
 
-		public Socket getSocket() {
+
+
+
+
+	public Socket getSocket() {
 			return s;
 		}
 
