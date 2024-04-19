@@ -41,12 +41,12 @@ public class Chat {
     private ClientMsg clientMsg;
 
 
-    public Chat() {
+    public Chat() throws UnknownHostException {
         // connect to the server
         clientMsg = new ClientMsg("localhost", 1666);
         clientMsg.addMessageListener((MessageListener) this);
         clientMsg.addConnectionListener((ConnectionListener) this);
-        clientMsg.startSession();
+        clientMsg.startSession("password");
 
         initializeUI();
         customizeUIComponents();
@@ -526,7 +526,11 @@ public class Chat {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
-                new Chat();
+                try {
+                    new Chat();
+                } catch (UnknownHostException e) {
+                    throw new RuntimeException(e);
+                }
             }
         });
     }
