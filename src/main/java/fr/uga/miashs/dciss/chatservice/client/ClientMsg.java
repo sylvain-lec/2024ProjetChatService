@@ -455,7 +455,7 @@ public class ClientMsg {
 				} else if (code == 1) { //envoyer un fichier
 					System.out.println("\nA qui voulez vous envoyer un fichier ? ");
 					int dest = Integer.parseInt(sc.nextLine());
-					System.out.println("\nChemin du fichier ? ");
+					System.out.println("\nChemin du fichigier ? ");
 					String path = sc.nextLine(); // Use nextLine() to read the file path
 					Path filePath = Path.of(path);
 					String filename = filePath.getFileName().toString();
